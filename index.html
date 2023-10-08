@@ -3,14 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <title>实现word标注效果</title>
     <style>
+        * {
+            margin: 0;
+            box-sizing: border-box;
+        }
         p {
             word-break: break-all;
+        }
+        html {
+            height: 100%;
+        }
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
         }
         dimension {
             position: relative;
             background-color: #ffd5d5;
+        }
+        .dimension-button {
+            padding: 10px;
+            border-bottom: 1px solid #f4f4f4;
         }
         .dimension-start::before, .dimension-end::after {
             position: absolute;
@@ -24,29 +40,50 @@
         }
         .dimension-end::after {
             content: '}';
-            margin-left: -0.2em;
-            
+            margin-left: -0.2em;   
+        }
+        .dimension-main {
+            flex: 1;
+            display: flex;
+        }
+        .dimension-contain {
+            flex: 1;
+            padding: 10px;
+        }
+        .dimension-text {
+            width: 240px;
+            background-color: #f4f4f4;
+        }
+        #tip-btn {
+            color: #f01201;
         }
     </style>
 </head>
 <body>
-    <button id="addBtn">添加标注</button>
-    <div class="dimension-contain">
-        <div>
-            <p>0</p>
-            <p>111111</p>
-            <p>2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
-            <p>3333<span>123x</span>33</p>
-            <p>444444</p>
-            <p>555555</p>
-            <p>666666</p>
-            <p>777777</p>
-            <p>888888</p>
-            <p>999999</p>
-        </div>
-        <div>00000</div>
+    <div class="dimension-button">
+        <button id="add-btn">标注</button>
+        <span id="tip-btn"></span>
     </div>
-    <div></div>
+    <div class="dimension-main">
+        <div class="dimension-contain">
+            <div>
+                <p>0</p>
+                <p>111111</p>
+                <p>2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
+                <p>3333<span>123x</span>33</p>
+                <p>444444</p>
+                <p>555555</p>
+                <p>666666</p>
+                <p>777777</p>
+                <p>888888</p>
+                <p>999999</p>
+            </div>
+            <div>00000</div>
+        </div>
+        <div class="dimension-text">
+            
+        </div>
+    </div>
     <script>
         const dimensionName = 'dimension'
         const dimensionData = {}
@@ -69,8 +106,14 @@
             }
             return list
         }
-        document.querySelector('#addBtn').addEventListener('click', () => {
+        document.querySelector('#add-btn').addEventListener('click', () => {
             const selection = window.getSelection()
+            if (!selection.anchorNode) {
+                document.querySelector('#tip-btn').innerText = '先框选一下嘛😑'
+                return
+            } else {
+                document.querySelector('#tip-btn').innerText = ''
+            }
             let { startContainer: startNode, endContainer: endNode, startOffset, endOffset } = selection.getRangeAt(0)
             const contain = document.querySelector('.dimension-contain')
             let elem = startNode
@@ -78,6 +121,11 @@
                 elem = elem.parentElement
             }
             const list = getChildNodes(elem, startNode, endNode).filter(node => node.nodeType === Node.TEXT_NODE)
+            if (startNode.textContent.length === startOffset) {
+                list.shift()
+                startNode = list[0]
+                startOffset = 0
+            }
             if (endNode.nodeType !== Node.TEXT_NODE) {
                 endNode = list[list.length - 1]
                 endOffset = endNode.textContent.length
