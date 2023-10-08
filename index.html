@@ -9,97 +9,124 @@
             word-break: break-all;
         }
         dimension {
-            color: red;
+            position: relative;
+            background-color: #ffd5d5;
+        }
+        .dimension-start::before, .dimension-end::after {
+            position: absolute;
+            margin-top: -0.1em;
+            color: #f01201;
+            z-index: 1;
+        }
+        .dimension-start::before {
+            content: '{';
+            margin-left: -0.2em;
+        }
+        .dimension-end::after {
+            content: '}';
+            margin-left: -0.2em;
+            
         }
     </style>
 </head>
 <body>
-    <div>
-        <input id="addInput" type="text">
-        <button id="addBtn">添加标注</button>
+    <button id="addBtn">添加标注</button>
+    <div class="dimension-contain">
+        <div>
+            <p>0</p>
+            <p>111111</p>
+            <p>2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
+            <p>3333<span>123x</span>33</p>
+            <p>444444</p>
+            <p>555555</p>
+            <p>666666</p>
+            <p>777777</p>
+            <p>888888</p>
+            <p>999999</p>
+        </div>
+        <div>00000</div>
     </div>
-    <p>0</p>
-    <p>111111</p>
-    <p>2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
-    <p>3333<span>123x</span>33</p>
-    <p>444444</p>
-    <p>555555</p>
-    <p>666666</p>
-    <p>777777</p>
-    <p>888888</p>
-    <p>999999</p>
+    <div></div>
     <script>
-        function getChildNodes (node, list) {
-            list = list || [node]
-            const childNodes = node.childNodes || []
-            childNodes.forEach(node => {
-                list.push(node)
-                getChildNodes(node, list)
-            })
-            return list
-        }
         const dimensionName = 'dimension'
         const dimensionData = {}
+        function isValidNode (node) {
+            return node.nodeType === Node.TEXT_NODE ? !!node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2') : true
+        }
+        function getChildNodes (node, startNode, endNode, list = [], isParent = true) {
+            if (!list.includes(endNode)) {
+                for (const node1 of node.childNodes) {
+                    if (isValidNode(node1) && ((!list.length && node1 === startNode) || list.length)) {
+                        list.push(node1)
+                    }
+                    if (list.includes(endNode)) break 
+                    getChildNodes(node1, startNode, endNode, list, false)
+                }
+                if (isParent) {
+                    const nextNode = node.nextSibling
+                    nextNode && getChildNodes(nextNode, startNode, endNode, list)
+                }
+            }
+            return list
+        }
         document.querySelector('#addBtn').addEventListener('click', () => {
             const selection = window.getSelection()
-            const { anchorNode, focusNode } = selection
-            const startElem = anchorNode.nodeType === Node.TEXT_NODE ? anchorNode.parentElement : anchorNode
-            const endElem = focusNode.nodeType === Node.TEXT_NODE ? focusNode.parentElement : focusNode
-            const startOffset = selection.anchorOffset
-            const endOffset = selection.focusOffset
-            const textList = selection.toString().split(/\n+/)
-            let isEnd = false
-            let elem = anchorNode
-            while (elem.parentElement !== document.body) {
+            let { startContainer: startNode, endContainer: endNode, startOffset, endOffset } = selection.getRangeAt(0)
+            const contain = document.querySelector('.dimension-contain')
+            let elem = startNode
+            while (elem.parentElement !== contain) {
                 elem = elem.parentElement
             }
-            const list = getChildNodes(elem)
-            while (!list.includes(focusNode) && list.length < 100) {
-                elem = elem.nextSibling
-                list.push(elem)
-                getChildNodes(elem, list)
+            const list = getChildNodes(elem, startNode, endNode).filter(node => node.nodeType === Node.TEXT_NODE)
+            if (endNode.nodeType !== Node.TEXT_NODE) {
+                endNode = list[list.length - 1]
+                endOffset = endNode.textContent.length
             }
             console.log(list)
-            console.log('focusNode', focusNode)
-            console.log(selection)
-            console.log(startOffset, endOffset)
-            const key = Date.now()
-            if (document.querySelector('input').value === 'no') return
             // return
-            let start = false
+            const key = Date.now()
+            dimensionData[key] = ''
+            let isStart = false
             for (const node of list) {
-                // console.log(!(start = start || node === anchorNode))
-                if (!(start = start || node === anchorNode)) continue
-                const isEnd = endOffset === 0 || node === focusNode
+                if (!(isStart = isStart || node === startNode)) continue
+                const isEnd = endOffset === 0 || node === endNode
                 if (node.nodeType === Node.TEXT_NODE) {
                     let text = node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2')
-                    console.log(node, text)
                     if (text) {
-                        let startText = '', endText = '', dimensionText = text
-                        if (node === anchorNode && startOffset) {
+                        let startText = ''
+                        let endText = ''
+                        let dimensionText = text
+                        const isStart = node === startNode
+                        const isEnd = node === endNode
+                        if (isStart && startOffset) {
                             startText = text.substring(0, startOffset)
                             dimensionText = text.substring(startOffset, text.length)
                         }
-                        if (node === focusNode && endOffset < text.length) {
+                        if (isEnd && endOffset < text.length) {
                             endText = text.substring(endOffset)
                             dimensionText = dimensionText.substring(0, dimensionText.length - endText.length)
                         }
                         const parent = node.parentElement
                         if (!startText && !endText && parent.nodeName.toLowerCase() === dimensionName) {
                             parent.setAttribute('key', parent.getAttribute('key') + `,${key}`)
-                            return
+                            isStart && parent.classList.add('dimension-start')
+                            isEnd && parent.classList.add('dimension-end')
+                            continue
                         }
-                        const dimension = document.createElement(dimensionName)
-                        dimension.innerText = dimensionText
-                        dimension.setAttribute('key', key)
-                        parent.replaceChild(dimension, node)
-                        if (startText) {
-                            parent.insertBefore(document.createTextNode(startText), dimension)
+                        if (dimensionText) {
+                            const dimension = document.createElement(dimensionName)
+                            isStart && dimension.classList.add('dimension-start')
+                            isEnd && dimension.classList.add('dimension-end')
+                            dimension.innerText = dimensionText
+                            dimension.setAttribute('key', key)
+                            parent.replaceChild(dimension, node)
+                            if (startText) {
+                                parent.insertBefore(document.createTextNode(startText), dimension)
+                            }
+                            if (endText) {
+                                parent.insertBefore(document.createTextNode(endText), dimension.nextSibling)
+                            }
                         }
-                        if (endText) {
-                            parent.insertBefore(document.createTextNode(endText), dimension.nextSibling)
-                        }
-                        console.log(startText, endText, parent)
                     }
                 }
                 if (isEnd) break
