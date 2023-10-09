@@ -12,25 +12,20 @@
         p {
             word-break: break-all;
         }
-        html {
-            height: 100%;
-        }
-        body {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
         dimension {
             position: relative;
             background-color: #ffd5d5;
         }
         .dimension-button {
+            position: sticky;
+            top: 0;
             padding: 10px;
+            background-color: #fff;
             border-bottom: 1px solid #f4f4f4;
+            z-index: 1;
         }
         .dimension-start::before, .dimension-end::after {
             position: absolute;
-            margin-top: -0.1em;
             color: #f01201;
             z-index: 1;
         }
@@ -43,16 +38,52 @@
             margin-left: -0.2em;   
         }
         .dimension-main {
-            flex: 1;
             display: flex;
         }
         .dimension-contain {
             flex: 1;
             padding: 10px;
+            font-size: 30px;
         }
         .dimension-text {
+            position: relative;
+            padding: 0 5px 0 30px;
             width: 240px;
             background-color: #f4f4f4;
+        }
+        .dimension-lines {
+            position: absolute;
+            left: 0;
+        }
+        .dimension-line {
+            position: absolute;
+            right: 0;
+            left: -100px;
+            border-bottom: 1px dashed #f01201;
+        }
+        .dimension-list {
+            position: relative;
+        }
+        .dimension-items {
+            position: absolute;
+            width: 100%;
+        }
+        .dimension-item {
+            /* margin-bottom: 5px; */
+            padding: 5px;
+            font-size: 12px;
+            border-radius: 5px;
+            border: 1px solid #f01201;
+            background-color: #ffd5d5;
+        }
+        .dimension-item + .dimension-item {
+            margin-top: 1px;
+        }
+        .dimension-label {
+            float: left;
+        }
+        .dimension-input {
+            outline: 0;
         }
         #tip-btn {
             color: #f01201;
@@ -69,7 +100,7 @@
             <div>
                 <p>0</p>
                 <p>111111</p>
-                <p>2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
+                <p style="font-size: 50px;">2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
                 <p>3333<span>123x</span>33</p>
                 <p>444444</p>
                 <p>555555</p>
@@ -81,12 +112,24 @@
             <div>00000</div>
         </div>
         <div class="dimension-text">
-            
+            <div class="dimension-lines">
+            </div>
+            <div class="dimension-list">
+                <!-- <div class="dimension-items">
+                    <div class="dimension-item">
+                        <label class="dimension-label">标注：</label>
+                        <div class="dimension-input" contenteditable>&nbsp;</div>
+                    </div>
+                    <div class="dimension-item">
+                        <label class="dimension-label">标注：</label>
+                        <div class="dimension-input" contenteditable>&nbsp;</div>
+                    </div>
+                </div> -->
+            </div>
         </div>
     </div>
     <script>
         const dimensionName = 'dimension'
-        const dimensionData = {}
         function isValidNode (node) {
             return node.nodeType === Node.TEXT_NODE ? !!node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2') : true
         }
@@ -133,13 +176,12 @@
             console.log(list)
             // return
             const key = Date.now()
-            dimensionData[key] = ''
             let isStart = false
             for (const node of list) {
                 if (!(isStart = isStart || node === startNode)) continue
                 const isEnd = endOffset === 0 || node === endNode
                 if (node.nodeType === Node.TEXT_NODE) {
-                    let text = node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2')
+                    let text = node.textContent
                     if (text) {
                         let startText = ''
                         let endText = ''
@@ -163,11 +205,14 @@
                         }
                         if (dimensionText) {
                             const dimension = document.createElement(dimensionName)
-                            isStart && dimension.classList.add('dimension-start')
-                            isEnd && dimension.classList.add('dimension-end')
                             dimension.innerText = dimensionText
                             dimension.setAttribute('key', key)
                             parent.replaceChild(dimension, node)
+                            isStart && dimension.classList.add('dimension-start')
+                            if (isEnd) {
+                                dimension.classList.add('dimension-end')
+                                setText(dimension, key)
+                            }
                             if (startText) {
                                 parent.insertBefore(document.createTextNode(startText), dimension)
                             }
@@ -181,6 +226,61 @@
             }
             selection.removeAllRanges()
         })
+        const data = {
+            bottomData: {
+                123: [1,2,3,4,5]
+            },
+            bottomList: [],
+            dimensionTop: 0,
+            dimensionMinHeight: 0
+        }
+        const bottomList = []
+        function setText (node, key) {
+            window.requestAnimationFrame(() => {
+                console.log(node, node.getBoundingClientRect())
+                const { top, bottom, right } = node.getBoundingClientRect()
+                const item = data[bottom] || { data: {}, right: [] }
+                const lineIndex = data.bottomList.indexOf(bottom)
+                const dimensionLines = document.querySelector('.dimension-lines')
+                const dimensionList = document.querySelector('.dimension-list')
+                const { top: linesTop, left: linesLeft } = dimensionLines.getBoundingClientRect()
+                const left = right - linesLeft
+                const dimensionTop = top - linesTop
+                if (lineIndex < 0) {
+                    const dimensionLine = document.createElement('div')
+                    dimensionLine.className = 'dimension-line'
+                    dimensionLine.dataset.bottom = bottom
+                    dimensionLine.style.top = `${bottom - linesTop}px`
+                    dimensionLine.style.left = `${left}px`
+                    dimensionLines.appendChild(dimensionLine)
+                    data.bottomList.push(bottom)
+                    const dimensionMinHeight = bottom - linesTop
+                    data.dimensionTop = Math.min(data.dimensionTop || dimensionTop, dimensionTop)
+                    data.dimensionMinHeight = Math.max(data.dimensionMinHeight, dimensionMinHeight)
+                    dimensionList.style.paddingTop = `${data.dimensionTop}px`
+                    dimensionList.style.minHeight = `${data.dimensionMinHeight}px`
+                } else {
+                    const dimensionLine = document.querySelector(`.dimension-line:nth-child(${lineIndex + 1})`)
+                    dimensionLine.style.left = `${Math.min(left, parseFloat(dimensionLine.style.left))}px`
+                }
+                const rightList = data.bottomData[bottom] || []
+                let dimensionItems = document.querySelector(`.dimension-items[data-bottom="${bottom}"]`)
+                if (!dimensionItems) {
+                    dimensionItems = document.createElement('div')
+                    dimensionItems.className = 'dimension-items'
+                    dimensionItems.dataset.bottom = bottom
+                    dimensionItems.style.top = `${dimensionTop}px`
+                    dimensionList.appendChild(dimensionItems)
+                }
+                const dimensionItem = document.createElement('div')
+                dimensionItem.className = 'dimension-item'
+                dimensionItem.dataset.bottom = bottom
+                dimensionItem.dataset.key = key
+                dimensionItem.innerHTML = `<label class="dimension-label">标注：</label>
+                    <div class="dimension-input" contenteditable>&nbsp;</div>`
+                dimensionItems.appendChild(dimensionItem)
+            })
+        }
     </script>
 </body>
 </html>
