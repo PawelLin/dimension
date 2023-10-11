@@ -39,8 +39,7 @@ class Dimension {
                 hasItem = target.className.includes('dimension-item')
                 !hasItem && (target = target.parentElement)
             }
-            this.removeActiveItem()
-            hasItem && this.addActiveItem(target)
+            this.toggleActiveItem(hasItem ? target : null)
         })
     }
     // 新增标注
@@ -79,7 +78,7 @@ class Dimension {
             }
             const parent = node.parentElement
             if (!startText && !endText && parent.nodeName.toLowerCase() === nodeName.toLowerCase()) {
-                parent.setAttribute('key', parent.getAttribute('key') + `,${key}`)
+                parent.dataset.key = `${parent.dataset.key},${key}`
                 isStart && parent.classList.add('dimension-start')
                 if (isEnd) {
                     parent.classList.add('dimension-end')
@@ -90,7 +89,7 @@ class Dimension {
             if (dimensionText) {
                 const dimension = document.createElement(nodeName)
                 dimension.innerText = dimensionText
-                dimension.setAttribute('key', key)
+                dimension.dataset.key = key
                 parent.replaceChild(dimension, node)
                 isStart && dimension.classList.add('dimension-start')
                 if (isEnd) {
@@ -112,7 +111,6 @@ class Dimension {
         window.requestAnimationFrame(() => {
             const { top, bottom, right } = node.getBoundingClientRect()
             const { top: linesTop, left: linesLeft } = this.elem.lines.getBoundingClientRect()
-            this.removeActiveItem()
             this.addLine({ bottom, top: bottom - linesTop, left: right - linesLeft })
             this.activeItem = this.addItem({ bottom, top: top - linesTop, key })
         })
@@ -124,12 +122,12 @@ class Dimension {
         if (bottomIndex < 0) {
             const closestBottomIndex = bottomList.findLastIndex((bottom1, index) => (bottom1 || bottom) <= bottom && (bottomList[index + 1] || bottom) >= bottom)
             const line = document.createElement('div')
-            line.className = 'dimension-line active'
+            line.className = 'dimension-line'
             line.dataset.bottom = bottom
             line.style.top = `${top}px`
             line.style.left = `${left}px`
             if (closestBottomIndex > -1) {
-                this.elem.lines.insertBefore(line, document.querySelector(`.dimension-line:nth-child(${closestBottomIndex + 1})`).nextSibling)
+                this.elem.lines.insertBefore(line, this.getLineByIndex(closestBottomIndex + 1).nextSibling)
                 this.data.bottomList.splice(closestBottomIndex + 1, 0, bottom)
             } else {
                 this.elem.lines.insertBefore(line, this.elem.lines.firstChild)
@@ -137,7 +135,7 @@ class Dimension {
             }
             console.log(this.data.bottomList)
         } else {
-            const line = document.querySelector(`.dimension-line:nth-child(${bottomIndex + 1})`)
+            const line = this.getLineByIndex(bottomIndex + 1)
             line.style.left = `${Math.min(left, parseFloat(line.style.left))}px`
         }
         return bottomIndex
@@ -153,50 +151,63 @@ class Dimension {
             this.elem.list.appendChild(items)
         }
         const item = document.createElement('div')
-        item.className = 'dimension-item active'
+        item.className = 'dimension-item'
         item.dataset.bottom = bottom
         item.dataset.key = key
         item.innerHTML = `<label class="dimension-label">标注：</label>
             <div class="dimension-input" contenteditable>&nbsp;</div>`
         items.appendChild(item)
-        item.querySelector('.dimension-input').focus()
+        this.toggleActiveItem(item)
         return item
     }
     // 删除标注
     remove () {
         if (this.activeItem) {
             const { bottom, key } = this.activeItem.dataset
-            const dimensions = document.querySelectorAll(`dimension[key="${key}"]`)
+            const dimensions = document.querySelectorAll(`dimension[data-key*="${key}"]`)
             const nextItem = this.activeItem.nextElementSibling
             const parent = this.activeItem.parentElement
             Array.from(dimensions).forEach(elem => {
-                const text = document.createTextNode(`${elem.innerText}`)
-                elem.parentElement.replaceChild(text, elem)
+                const newKey = elem.dataset.key.split(',').filter(key1 => key1 !== key).join(',')
+                if (newKey) {
+                    elem.dataset.key = newKey
+                } else {
+                    const text = document.createTextNode(`${elem.innerText}`)
+                    elem.parentElement.replaceChild(text, elem)
+                }
             })
             this.activeItem.remove()
-            nextItem && this.addActiveItem(nextItem)
+            nextItem && this.toggleActiveItem(nextItem)
             if (!parent.children.length) {
                 this.data.bottomList.splice(this.data.bottomList.indexOf(bottom), 1)
                 parent.remove()
-                document.querySelector(`.dimension-line[data-bottom="${bottom}"]`).remove()
+                this.getLineByBottom(bottom).remove()
                 this.activeItem = null
             }
         }
     }
-    // 增加选中状态
-    addActiveItem (item) {
-        this.activeItem = item
-        item.classList.add('active')
-        document.querySelector(`.dimension-line[data-bottom="${item.dataset.bottom}"]`).classList.add('active')
-        item.querySelector('.dimension-input').focus()
-    }
-    // 移除选中状态
-    removeActiveItem () {
+    // 更改选中状态
+    toggleActiveItem (elem) {
         if (this.activeItem) {
             this.activeItem.classList.remove('active')
-            document.querySelector(`.dimension-line[data-bottom="${this.activeItem.dataset.bottom}"]`).classList.remove('active')
+            this.getLineByBottom(this.activeItem.dataset.bottom).classList.remove('active')
+        }
+        if (elem) {
+            this.activeItem = elem
+            this.activeItem.classList.add('active')
+            this.getLineByBottom(this.activeItem.dataset.bottom).classList.add('active')
+            this.activeItem.querySelector('.dimension-input').focus()
+        } else {
             this.activeItem = null
         }
+    }
+    // 获取指定data-bottom的底线节点
+    getLineByBottom (bottom) {
+        return document.querySelector(`.dimension-line[data-bottom="${bottom}"]`)
+    }
+    // 获取指定位置的底线节点
+    getLineByIndex (index) {
+        return document.querySelector(`.dimension-line:nth-child(${index})`)
     }
     // 获取框选开始到结束的节点集合
     getChildNodes(node, startNode, endNode, list = [], isParent = true) {
