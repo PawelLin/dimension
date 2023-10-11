@@ -7,13 +7,18 @@ class Dimension {
         }, options)
         this.data = {
             bottomData: {},
-            bottomList: []
+            bottomList: [],
+            startKeys: [],
+            endKeys: []
         }
         this.elem = {
             entry: document.querySelector(this.options.entry),
             output: document.querySelector(this.options.output),
             lines: document.querySelector('.dimension-lines'),
             list: document.querySelector('.dimension-list')
+        }
+        this.current = {
+            key: null
         }
         this.activeItem = null
         this.initElem()
@@ -31,11 +36,11 @@ class Dimension {
             this.elem.output.appendChild(list)
         }
     }
-    bindEvent () {
+    bindEvent() {
         this.elem.output.addEventListener('click', e => {
             let target = e.target
             let hasItem = false
-            while(target && !hasItem) {
+            while (target && !hasItem) {
                 hasItem = target.className.includes('dimension-item')
                 !hasItem && (target = target.parentElement)
             }
@@ -44,6 +49,7 @@ class Dimension {
     }
     // 新增标注
     add(key = Date.now()) {
+        this.current.key = key
         const { nodeName } = this.options
         const selection = window.getSelection()
         let { startContainer: startNode, endContainer: endNode, startOffset, endOffset } = selection.getRangeAt(0)
@@ -79,9 +85,8 @@ class Dimension {
             const parent = node.parentElement
             if (!startText && !endText && parent.nodeName.toLowerCase() === nodeName.toLowerCase()) {
                 parent.dataset.key = `${parent.dataset.key},${key}`
-                isStart && parent.classList.add('dimension-start')
+                this.addSide(parent, `${+isStart}${+isEnd}`)
                 if (isEnd) {
-                    parent.classList.add('dimension-end')
                     this.addOutputItem(parent, key)
                 }
                 continue
@@ -91,9 +96,8 @@ class Dimension {
                 dimension.innerText = dimensionText
                 dimension.dataset.key = key
                 parent.replaceChild(dimension, node)
-                isStart && dimension.classList.add('dimension-start')
+                this.addSide(dimension, `${+isStart}${+isEnd}`)
                 if (isEnd) {
-                    dimension.classList.add('dimension-end')
                     this.addOutputItem(dimension, key)
                 }
                 if (startText) {
@@ -105,6 +109,26 @@ class Dimension {
             }
         }
         selection.removeAllRanges()
+    }
+    /**
+     * 
+     * @param {*} parent 
+     * @param {*} type 00-不添加 01-添加结尾 10-添加开头 11-添加首尾
+     */
+    addSide (parent, type) {
+        if (!type || type === '00') return
+        if (type.indexOf(1) === 0) {
+            const span = document.createElement('span')
+            span.className = 'dimension-start'
+            parent.insertBefore(span, parent.firstChild)
+            this.data.startKeys.push(this.current.key)
+        }
+        if (type.lastIndexOf(1) === 1) {
+            const span = document.createElement('span')
+            span.className = 'dimension-end'
+            parent.appendChild(span)
+            this.data.endKeys.push(this.current.key)
+        }
     }
     // 新增标注块
     addOutputItem(node, key) {
@@ -161,7 +185,7 @@ class Dimension {
         return item
     }
     // 删除标注
-    remove () {
+    remove() {
         if (this.activeItem) {
             const { bottom, key } = this.activeItem.dataset
             const dimensions = document.querySelectorAll(`dimension[data-key*="${key}"]`)
@@ -187,7 +211,7 @@ class Dimension {
         }
     }
     // 更改选中状态
-    toggleActiveItem (elem) {
+    toggleActiveItem(elem) {
         if (this.activeItem) {
             this.activeItem.classList.remove('active')
             this.getLineByBottom(this.activeItem.dataset.bottom).classList.remove('active')
@@ -202,11 +226,11 @@ class Dimension {
         }
     }
     // 获取指定data-bottom的底线节点
-    getLineByBottom (bottom) {
+    getLineByBottom(bottom) {
         return document.querySelector(`.dimension-line[data-bottom="${bottom}"]`)
     }
     // 获取指定位置的底线节点
-    getLineByIndex (index) {
+    getLineByIndex(index) {
         return document.querySelector(`.dimension-line:nth-child(${index})`)
     }
     // 获取框选开始到结束的节点集合
