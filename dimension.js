@@ -85,9 +85,9 @@ class Dimension {
             const parent = node.parentElement
             if (!startText && !endText && parent.nodeName.toLowerCase() === nodeName.toLowerCase()) {
                 parent.dataset.key = `${parent.dataset.key},${key}`
-                this.addSide(parent, `${+isStart}${+isEnd}`)
+                const { endSide } = this.addSide(parent, `${+isStart}${+isEnd}`)
                 if (isEnd) {
-                    this.addOutputItem(parent, key)
+                    this.addOutputItem(endSide, key)
                 }
                 continue
             }
@@ -96,9 +96,9 @@ class Dimension {
                 dimension.innerText = dimensionText
                 dimension.dataset.key = key
                 parent.replaceChild(dimension, node)
-                this.addSide(dimension, `${+isStart}${+isEnd}`)
+                const { endSide } = this.addSide(dimension, `${+isStart}${+isEnd}`)
                 if (isEnd) {
-                    this.addOutputItem(dimension, key)
+                    this.addOutputItem(endSide, key)
                 }
                 if (startText) {
                     parent.insertBefore(document.createTextNode(startText), dimension)
@@ -116,13 +116,16 @@ class Dimension {
      * @param {*} type 00-不添加 01-添加结尾 10-添加开头 11-添加首尾
      */
     addSide (parent, type) {
-        if (!type || type === '00') return
+        if (!type || type === '00') return {}
+        let startSide = null
+        let endSide = null
         if (type.indexOf(1) === 0) {
             const span = document.createElement('span')
             span.className = 'dimension-side start'
             span.dataset.key = this.current.key
             parent.insertBefore(span, parent.firstChild)
             this.data.startKeys.push(this.current.key)
+            startSide = span
         }
         if (type.lastIndexOf(1) === 1) {
             const span = document.createElement('span')
@@ -130,7 +133,9 @@ class Dimension {
             span.dataset.key = this.current.key
             parent.appendChild(span)
             this.data.endKeys.push(this.current.key)
+            endSide = span
         }
+        return { startSide, endSide }
     }
     // 新增标注块
     addOutputItem(node, key) {

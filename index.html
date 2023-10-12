@@ -25,20 +25,19 @@
             z-index: 1;
         }
         .dimension-side {
-            position: absolute;
             color: #f01201;
-            z-index: 1;
         }
         .dimension-side::before {
             position: absolute;
+            z-index: 1;
         }
         .dimension-side.start::before {
             content: '{';
-            left: -0.1em;
+            margin-left: -0.1em;
         }
         .dimension-side.end::before {
             content: '}';
-            right: -0.1em;
+            margin-left: -0.2em;
         }
         .dimension-main {
             display: flex;
