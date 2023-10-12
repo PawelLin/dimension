@@ -119,13 +119,15 @@ class Dimension {
         if (!type || type === '00') return
         if (type.indexOf(1) === 0) {
             const span = document.createElement('span')
-            span.className = 'dimension-start'
+            span.className = 'dimension-side start'
+            span.dataset.key = this.current.key
             parent.insertBefore(span, parent.firstChild)
             this.data.startKeys.push(this.current.key)
         }
         if (type.lastIndexOf(1) === 1) {
             const span = document.createElement('span')
-            span.className = 'dimension-end'
+            span.className = 'dimension-side end'
+            span.dataset.key = this.current.key
             parent.appendChild(span)
             this.data.endKeys.push(this.current.key)
         }
@@ -188,9 +190,11 @@ class Dimension {
     remove() {
         if (this.activeItem) {
             const { bottom, key } = this.activeItem.dataset
+            const sides = document.querySelectorAll(`.dimension-side[data-key="${key}"]`)
             const dimensions = document.querySelectorAll(`dimension[data-key*="${key}"]`)
             const nextItem = this.activeItem.nextElementSibling
             const parent = this.activeItem.parentElement
+            Array.from(sides).forEach(elem => elem.remove())
             Array.from(dimensions).forEach(elem => {
                 const newKey = elem.dataset.key.split(',').filter(key1 => key1 !== key).join(',')
                 if (newKey) {

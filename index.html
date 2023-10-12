@@ -24,19 +24,19 @@
             border-bottom: 1px solid #f4f4f4;
             z-index: 1;
         }
-        .dimension-start, .dimension-end {
+        .dimension-side {
             position: absolute;
             color: #f01201;
             z-index: 1;
         }
-        .dimension-start::before, .dimension-end::before {
+        .dimension-side::before {
             position: absolute;
         }
-        .dimension-start::before {
+        .dimension-side.start::before {
             content: '{';
             left: -0.1em;
         }
-        .dimension-end::before {
+        .dimension-side.end::before {
             content: '}';
             right: -0.1em;
         }
