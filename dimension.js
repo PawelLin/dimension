@@ -7,9 +7,7 @@ class Dimension {
         }, options)
         this.data = {
             bottomData: {},
-            bottomList: [],
-            startKeys: [],
-            endKeys: []
+            bottomList: []
         }
         this.elem = {
             entry: document.querySelector(this.options.entry),
@@ -23,6 +21,11 @@ class Dimension {
         this.activeItem = null
         this.initElem()
         this.bindEvent()
+        document.addEventListener('keyup', e => {
+            if (e.code === 'Space') {
+                this.add()
+            }
+        })
     }
     initElem() {
         if (!this.elem.lines) {
@@ -124,7 +127,6 @@ class Dimension {
             span.className = 'dimension-side start'
             span.dataset.key = this.current.key
             parent.insertBefore(span, parent.firstChild)
-            this.data.startKeys.push(this.current.key)
             startSide = span
         }
         if (type.lastIndexOf(1) === 1) {
@@ -132,7 +134,6 @@ class Dimension {
             span.className = 'dimension-side end'
             span.dataset.key = this.current.key
             parent.appendChild(span)
-            this.data.endKeys.push(this.current.key)
             endSide = span
         }
         return { startSide, endSide }
@@ -142,8 +143,9 @@ class Dimension {
         window.requestAnimationFrame(() => {
             const { top, bottom, right } = node.getBoundingClientRect()
             const { top: linesTop, left: linesLeft } = this.elem.lines.getBoundingClientRect()
-            this.addLine({ bottom, top: bottom - linesTop, left: right - linesLeft })
-            this.activeItem = this.addItem({ bottom, top: top - linesTop, key })
+            const left = right - linesLeft
+            this.addLine({ bottom, top: bottom - linesTop, left })
+            this.activeItem = this.addItem({ bottom, top: top - linesTop, left, key })
         })
     }
     // 新增标注虚线
@@ -155,6 +157,7 @@ class Dimension {
             const line = document.createElement('div')
             line.className = 'dimension-line'
             line.dataset.bottom = bottom
+            line.dataset.left = left
             line.style.top = `${top}px`
             line.style.left = `${left}px`
             if (closestBottomIndex > -1) {
@@ -164,15 +167,15 @@ class Dimension {
                 this.elem.lines.insertBefore(line, this.elem.lines.firstChild)
                 this.data.bottomList.unshift(bottom)
             }
-            console.log(this.data.bottomList)
         } else {
             const line = this.getLineByIndex(bottomIndex + 1)
+            line.dataset.left = `${line.dataset.left},${left}`
             line.style.left = `${Math.min(left, parseFloat(line.style.left))}px`
         }
         return bottomIndex
     }
     // 新增标注输入框
-    addItem({ top, bottom, key }) {
+    addItem({ top, bottom, left, key }) {
         let items = document.querySelector(`.dimension-items[data-bottom="${bottom}"]`)
         if (!items) {
             items = document.createElement('div')
@@ -184,6 +187,7 @@ class Dimension {
         const item = document.createElement('div')
         item.className = 'dimension-item'
         item.dataset.bottom = bottom
+        item.dataset.left = left
         item.dataset.key = key
         item.innerHTML = `<label class="dimension-label">标注：</label>
             <div class="dimension-input" contenteditable>&nbsp;</div>`
@@ -194,7 +198,7 @@ class Dimension {
     // 删除标注
     remove() {
         if (this.activeItem) {
-            const { bottom, key } = this.activeItem.dataset
+            const { bottom, left, key } = this.activeItem.dataset
             const sides = document.querySelectorAll(`.dimension-side[data-key="${key}"]`)
             const dimensions = document.querySelectorAll(`dimension[data-key*="${key}"]`)
             const nextItem = this.activeItem.nextElementSibling
@@ -205,17 +209,29 @@ class Dimension {
                 if (newKey) {
                     elem.dataset.key = newKey
                 } else {
-                    const text = document.createTextNode(`${elem.innerText}`)
-                    elem.parentElement.replaceChild(text, elem)
+                    const childNodes = elem.childNodes
+                    let index = childNodes.length
+                    while (childNodes[--index]) {
+                        elem.parentElement.insertBefore(childNodes[index], elem.nextSibling)
+                    }
+                    elem.remove()
                 }
             })
             this.activeItem.remove()
-            nextItem && this.toggleActiveItem(nextItem)
+            if (nextItem) {
+                this.toggleActiveItem(nextItem)
+            }
+            const line = this.getLineByBottom(bottom)
             if (!parent.children.length) {
                 this.data.bottomList.splice(this.data.bottomList.indexOf(bottom), 1)
                 parent.remove()
-                this.getLineByBottom(bottom).remove()
+                line.remove()
                 this.activeItem = null
+            } else {
+                const leftList = line.dataset.left.split(',')
+                leftList.splice(leftList.indexOf(left), 1)
+                line.style.left = `${leftList.sort((a, b) => a - b)[0]}px`
+                line.dataset.left = leftList.join(',')
             }
         }
     }
