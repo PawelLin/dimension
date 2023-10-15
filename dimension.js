@@ -22,7 +22,7 @@ class Dimension {
         this.initElem()
         this.bindEvent()
         document.addEventListener('keyup', e => {
-            if (e.code === 'Space') {
+            if (e.code === 'KeyQ') {
                 this.add()
             }
         })
@@ -118,7 +118,7 @@ class Dimension {
      * @param {*} parent 
      * @param {*} type 00-不添加 01-添加结尾 10-添加开头 11-添加首尾
      */
-    addSide (parent, type) {
+    addSide(parent, type) {
         if (!type || type === '00') return {}
         let startSide = null
         let endSide = null
@@ -141,11 +141,11 @@ class Dimension {
     // 新增标注块
     addOutputItem(node, key) {
         window.requestAnimationFrame(() => {
-            const { top, bottom, right } = node.getBoundingClientRect()
+            const { top, bottom, right, height } = node.getBoundingClientRect()
             const { top: linesTop, left: linesLeft } = this.elem.lines.getBoundingClientRect()
             const left = right - linesLeft
             this.addLine({ bottom, top: bottom - linesTop, left })
-            this.activeItem = this.addItem({ bottom, top: top - linesTop, left, key })
+            this.activeItem = this.addItem({ bottom, top: top - linesTop, left, height, key })
         })
     }
     // 新增标注虚线
@@ -175,14 +175,10 @@ class Dimension {
         return bottomIndex
     }
     // 新增标注输入框
-    addItem({ top, bottom, left, key }) {
+    addItem({ top, bottom, left, height, key }) {
         let items = document.querySelector(`.dimension-items[data-bottom="${bottom}"]`)
         if (!items) {
-            items = document.createElement('div')
-            items.className = 'dimension-items'
-            items.dataset.bottom = bottom
-            items.style.top = `${top}px`
-            this.elem.list.appendChild(items)
+            items = this.createItems({ top, bottom, height })
         }
         const item = document.createElement('div')
         item.className = 'dimension-item'
@@ -194,6 +190,46 @@ class Dimension {
         items.appendChild(item)
         this.toggleActiveItem(item)
         return item
+    }
+    setItemsMarginTop (changeBottom) {
+        const index = Math.max(0, this.data.bottomList.indexOf(changeBottom))
+        const length = this.data.bottomList.length
+        let exceedingHeigh = 0
+        for (let i = index; i < length; i++) {
+            let bottom = this.data.bottomList[i]
+            const bottomData = this.data.bottomData[bottom]
+            const nextIndex = i + 1
+            exceedingHeigh += Math.max(0, (bottomData.itemsHeight - bottomData.height))
+            bottom = this.data.bottomList[nextIndex]
+            if (nextIndex < length && (exceedingHeigh > 0 || this.data.bottomData[bottom].marginTop > 0)) {
+                const marginTop = exceedingHeigh > 0 ? exceedingHeigh + 1 : 0
+                this.data.bottomData[bottom].marginTop = marginTop
+                document.querySelector(`.dimension-items[data-bottom="${bottom}"]`).style.marginTop = `${marginTop}px`
+            }
+        }
+    }
+    createItems({ top, bottom, height }) {
+        const items = document.createElement('div')
+        items.className = 'dimension-items'
+        items.dataset.bottom = bottom
+        items.style.top = `${top}px`
+        items.style.marginTop = `${0}px`
+        this.elem.list.appendChild(items)
+        this.data.bottomData[bottom] = { height, itemsHeight: height, marginTop: 0 }
+        this.setItemsMarginTop(this.data.bottomList[Math.max(0, this.data.bottomList.indexOf(bottom) - 1)])
+        const config = {
+            childList: true,
+            characterData: true,
+            subtree: true
+        }
+        const callback = () => {
+            const bottom = +items.dataset.bottom
+            this.data.bottomData[bottom].itemsHeight = items.offsetHeight
+            this.setItemsMarginTop(bottom)
+        }
+        const observer = new MutationObserver(callback)
+        observer.observe(items, config)
+        return items
     }
     // 删除标注
     remove() {
@@ -223,7 +259,7 @@ class Dimension {
             }
             const line = this.getLineByBottom(bottom)
             if (!parent.children.length) {
-                this.data.bottomList.splice(this.data.bottomList.indexOf(bottom), 1)
+                this.data.bottomList.splice(this.data.bottomList.indexOf(+bottom), 1)
                 parent.remove()
                 line.remove()
                 this.activeItem = null
@@ -279,6 +315,20 @@ class Dimension {
     // 判断是否为有效节点
     isValidNode(node) {
         return node.nodeType === Node.TEXT_NODE ? !!node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2') : true
+    }
+    //
+    mount () {
+        Array.from(this.elem.entry.children).forEach(elem => {
+            if (elem.innerText.match('<dimension data-key')) {
+                elem.innerHTML = elem.innerText
+            }
+        })
+        Array.from(document.querySelectorAll('.dimension-side.end')).forEach(elem => {
+            const keys = elem.dataset.key.split(',')
+            keys.forEach(key => {
+                this.addOutputItem(elem, key)
+            })
+        })
     }
 }
 
