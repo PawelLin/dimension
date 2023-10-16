@@ -72,6 +72,7 @@
         }
         .dimension-items {
             position: absolute;
+            margin-bottom: 1px;
             width: 100%;
         }
         .dimension-item {
@@ -86,7 +87,7 @@
             margin-top: 1px;
         }
         .dimension-item.active {
-            border-width: 2px;
+            /* border-width: 2px; */
             background-color: #ffa8a8;
         }
         .dimension-label {
@@ -130,7 +131,6 @@
     </div>
     <script>
         (function () {
-            return
             const text = {
                 a: 'aaaaa',
                 b: 'bbbbb'
@@ -164,160 +164,6 @@
         document.querySelector('#mount-btn').addEventListener('click', () => {
             dimension.mount()
         })
-    </script>
-    <script>
-        (function (){
-            return
-            const dimensionName = 'dimension'
-            function isValidNode (node) {
-                return node.nodeType === Node.TEXT_NODE ? !!node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2') : true
-            }
-            function getChildNodes (node, startNode, endNode, list = [], isParent = true) {
-                if (!list.includes(endNode)) {
-                    for (const node1 of node.childNodes) {
-                        if (list.includes(endNode)) break
-                        if (isValidNode(node1) && ((!list.length && node1 === startNode) || list.length)) {
-                            list.push(node1)
-                        }
-                        if (list.includes(endNode)) break
-                        getChildNodes(node1, startNode, endNode, list, false)
-                    }
-                    if (isParent) {
-                        const nextNode = node.nextSibling
-                        nextNode && getChildNodes(nextNode, startNode, endNode, list)
-                    }
-                }
-                return list
-            }
-            document.querySelector('#add-btn').addEventListener('click', () => {
-                const selection = window.getSelection()
-                if (!selection.anchorNode) {
-                    document.querySelector('#tip-btn').innerText = '先框选一下嘛😑'
-                    return
-                } else {
-                    document.querySelector('#tip-btn').innerText = ''
-                }
-                let { startContainer: startNode, endContainer: endNode, startOffset, endOffset } = selection.getRangeAt(0)
-                const contain = document.querySelector('.dimension-contain')
-                let elem = startNode
-                while (elem.parentElement !== contain) {
-                    elem = elem.parentElement
-                }
-                const list = getChildNodes(elem, startNode, endNode).filter(node => node.nodeType === Node.TEXT_NODE)
-                if (startNode.textContent.length === startOffset) {
-                    list.shift()
-                    startNode = list[0]
-                    startOffset = 0
-                }
-                if (endNode.nodeType !== Node.TEXT_NODE) {
-                    endNode = list[list.length - 1]
-                    endOffset = endNode.textContent.length
-                }
-                console.log(list)
-                // return
-                const key = Date.now()
-                let isStart = false
-                for (const node of list) {
-                    if (!(isStart = isStart || node === startNode)) continue
-                    const isEnd = endOffset === 0 || node === endNode
-                    if (node.nodeType === Node.TEXT_NODE) {
-                        let text = node.textContent
-                        if (text) {
-                            let startText = ''
-                            let endText = ''
-                            let dimensionText = text
-                            const isStart = node === startNode
-                            const isEnd = node === endNode
-                            if (isStart && startOffset) {
-                                startText = text.substring(0, startOffset)
-                                dimensionText = text.substring(startOffset, text.length)
-                            }
-                            if (isEnd && endOffset < text.length) {
-                                endText = text.substring(endOffset)
-                                dimensionText = dimensionText.substring(0, dimensionText.length - endText.length)
-                            }
-                            const parent = node.parentElement
-                            if (!startText && !endText && parent.nodeName.toLowerCase() === dimensionName) {
-                                parent.setAttribute('key', parent.getAttribute('key') + `,${key}`)
-                                isStart && parent.classList.add('dimension-start')
-                                if (isEnd) {
-                                    parent.classList.add('dimension-end')
-                                    setText(parent, key)
-                                }
-                                continue
-                            }
-                            if (dimensionText) {
-                                const dimension = document.createElement(dimensionName)
-                                dimension.innerText = dimensionText
-                                dimension.setAttribute('key', key)
-                                parent.replaceChild(dimension, node)
-                                isStart && dimension.classList.add('dimension-start')
-                                if (isEnd) {
-                                    dimension.classList.add('dimension-end')
-                                    setText(dimension, key)
-                                }
-                                if (startText) {
-                                    parent.insertBefore(document.createTextNode(startText), dimension)
-                                }
-                                if (endText) {
-                                    parent.insertBefore(document.createTextNode(endText), dimension.nextSibling)
-                                }
-                            }
-                        }
-                    }
-                    if (isEnd) break
-                }
-                selection.removeAllRanges()
-            })
-            const data = {
-                bottomData: {},
-                bottomList: [],
-                dimensionTop: 0,
-                dimensionMinHeight: 0
-            }
-            const bottomList = []
-            function setText (node, key) {
-                window.requestAnimationFrame(() => {
-                    console.log(node, node.getBoundingClientRect())
-                    const { top, bottom, right } = node.getBoundingClientRect()
-                    const item = data[bottom] || { data: {}, right: [] }
-                    const lineIndex = data.bottomList.indexOf(bottom)
-                    const dimensionLines = document.querySelector('.dimension-lines')
-                    const dimensionList = document.querySelector('.dimension-list')
-                    const { top: linesTop, left: linesLeft } = dimensionLines.getBoundingClientRect()
-                    const left = right - linesLeft
-                    const dimensionTop = top - linesTop
-                    if (lineIndex < 0) {
-                        const dimensionLine = document.createElement('div')
-                        dimensionLine.className = 'dimension-line'
-                        dimensionLine.dataset.bottom = bottom
-                        dimensionLine.style.top = `${bottom - linesTop}px`
-                        dimensionLine.style.left = `${left}px`
-                        dimensionLines.appendChild(dimensionLine)
-                        data.bottomList.push(bottom)
-                    } else {
-                        const dimensionLine = document.querySelector(`.dimension-line:nth-child(${lineIndex + 1})`)
-                        dimensionLine.style.left = `${Math.min(left, parseFloat(dimensionLine.style.left))}px`
-                    }
-                    const rightList = data.bottomData[bottom] || []
-                    let dimensionItems = document.querySelector(`.dimension-items[data-bottom="${bottom}"]`)
-                    if (!dimensionItems) {
-                        dimensionItems = document.createElement('div')
-                        dimensionItems.className = 'dimension-items'
-                        dimensionItems.dataset.bottom = bottom
-                        dimensionItems.style.top = `${dimensionTop}px`
-                        dimensionList.appendChild(dimensionItems)
-                    }
-                    const dimensionItem = document.createElement('div')
-                    dimensionItem.className = 'dimension-item'
-                    dimensionItem.dataset.bottom = bottom
-                    dimensionItem.dataset.key = key
-                    dimensionItem.innerHTML = `<label class="dimension-label">标注：</label>
-                        <div class="dimension-input" contenteditable>&nbsp;</div>`
-                    dimensionItems.appendChild(dimensionItem)
-                })
-            }
-        })()
     </script>
 </body>
 </html>

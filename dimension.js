@@ -141,11 +141,11 @@ class Dimension {
     // 新增标注块
     addOutputItem(node, key) {
         window.requestAnimationFrame(() => {
-            const { top, bottom, right, height } = node.getBoundingClientRect()
+            const { top, bottom, right } = node.getBoundingClientRect()
             const { top: linesTop, left: linesLeft } = this.elem.lines.getBoundingClientRect()
             const left = right - linesLeft
             this.addLine({ bottom, top: bottom - linesTop, left })
-            this.activeItem = this.addItem({ bottom, top: top - linesTop, left, height, key })
+            this.activeItem = this.addItem({ bottom, top: top - linesTop, left, key })
         })
     }
     // 新增标注虚线
@@ -175,10 +175,10 @@ class Dimension {
         return bottomIndex
     }
     // 新增标注输入框
-    addItem({ top, bottom, left, height, key }) {
+    addItem({ top, bottom, left, key }) {
         let items = document.querySelector(`.dimension-items[data-bottom="${bottom}"]`)
         if (!items) {
-            items = this.createItems({ top, bottom, height })
+            items = this.createItems({ top, bottom })
         }
         const item = document.createElement('div')
         item.className = 'dimension-item'
@@ -192,30 +192,32 @@ class Dimension {
         return item
     }
     setItemsMarginTop (changeBottom) {
-        const index = Math.max(0, this.data.bottomList.indexOf(changeBottom))
-        const length = this.data.bottomList.length
-        let exceedingHeigh = 0
-        for (let i = index; i < length; i++) {
-            let bottom = this.data.bottomList[i]
-            const bottomData = this.data.bottomData[bottom]
-            const nextIndex = i + 1
-            exceedingHeigh += Math.max(0, (bottomData.itemsHeight - bottomData.height))
-            bottom = this.data.bottomList[nextIndex]
-            if (nextIndex < length && (exceedingHeigh > 0 || this.data.bottomData[bottom].marginTop > 0)) {
-                const marginTop = exceedingHeigh > 0 ? exceedingHeigh + 1 : 0
-                this.data.bottomData[bottom].marginTop = marginTop
-                document.querySelector(`.dimension-items[data-bottom="${bottom}"]`).style.marginTop = `${marginTop}px`
+        window.requestAnimationFrame(() => {
+            const index = Math.max(0, this.data.bottomList.indexOf(changeBottom))
+            const bottom = this.data.bottomList[index]
+            if (bottom) {
+                const items = document.querySelector(`.dimension-items[data-bottom="${bottom}"]`)
+                let { bottom: itemsBottom } = items.getBoundingClientRect()
+                for (let i = index + 1; i < this.data.bottomList.length; i++) {
+                    const items = document.querySelector(`.dimension-items[data-bottom="${this.data.bottomList[i]}"]`)
+                    let { top, bottom } = items.getBoundingClientRect()
+                    let marginTop = parseFloat(items.style.marginTop)
+                    top -= marginTop
+                    bottom -= marginTop
+                    marginTop = Math.max(0, itemsBottom - top)
+                    itemsBottom = bottom + marginTop
+                    items.style.marginTop = `${marginTop}px`
+                }
             }
-        }
+        })
     }
-    createItems({ top, bottom, height }) {
+    createItems({ top, bottom }) {
         const items = document.createElement('div')
         items.className = 'dimension-items'
         items.dataset.bottom = bottom
         items.style.top = `${top}px`
         items.style.marginTop = `${0}px`
         this.elem.list.appendChild(items)
-        this.data.bottomData[bottom] = { height, itemsHeight: height, marginTop: 0 }
         this.setItemsMarginTop(this.data.bottomList[Math.max(0, this.data.bottomList.indexOf(bottom) - 1)])
         const config = {
             childList: true,
@@ -223,8 +225,6 @@ class Dimension {
             subtree: true
         }
         const callback = () => {
-            const bottom = +items.dataset.bottom
-            this.data.bottomData[bottom].itemsHeight = items.offsetHeight
             this.setItemsMarginTop(bottom)
         }
         const observer = new MutationObserver(callback)
