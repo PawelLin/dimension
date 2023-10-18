@@ -1,3 +1,4 @@
+import Callout from './callout.js'
 class Dimension {
     constructor(options) {
         this.options = Object.assign({
@@ -20,7 +21,8 @@ class Dimension {
         }
         this.activeItem = null
         this.initElem()
-        this.bindEvent()
+        // this.bindEvent()
+        this.callout = new Callout()
         document.addEventListener('keyup', e => {
             if (e.code === 'KeyQ') {
                 this.add()
@@ -143,94 +145,8 @@ class Dimension {
         window.requestAnimationFrame(() => {
             const { top, bottom, right } = node.getBoundingClientRect()
             const { top: linesTop, left: linesLeft } = this.elem.lines.getBoundingClientRect()
-            const left = right - linesLeft
-            this.addLine({ bottom, top: bottom - linesTop, left })
-            this.activeItem = this.addItem({ bottom, top: top - linesTop, left, key })
+            this.callout.addBox({ bottom, top: top - linesTop, left: right - linesLeft, key }, { top: bottom - linesTop })
         })
-    }
-    // 新增标注虚线
-    addLine({ top, bottom, left }) {
-        const bottomList = this.data.bottomList
-        const bottomIndex = this.data.bottomList.indexOf(bottom)
-        if (bottomIndex < 0) {
-            const closestBottomIndex = bottomList.findLastIndex((bottom1, index) => (bottom1 || bottom) <= bottom && (bottomList[index + 1] || bottom) >= bottom)
-            const line = document.createElement('div')
-            line.className = 'dimension-line'
-            line.dataset.bottom = bottom
-            line.dataset.left = left
-            line.style.top = `${top}px`
-            line.style.left = `${left}px`
-            if (closestBottomIndex > -1) {
-                this.elem.lines.insertBefore(line, this.getLineByIndex(closestBottomIndex + 1).nextSibling)
-                this.data.bottomList.splice(closestBottomIndex + 1, 0, bottom)
-            } else {
-                this.elem.lines.insertBefore(line, this.elem.lines.firstChild)
-                this.data.bottomList.unshift(bottom)
-            }
-        } else {
-            const line = this.getLineByIndex(bottomIndex + 1)
-            line.dataset.left = `${line.dataset.left},${left}`
-            line.style.left = `${Math.min(left, parseFloat(line.style.left))}px`
-        }
-        return bottomIndex
-    }
-    // 新增标注输入框
-    addItem({ top, bottom, left, key }) {
-        let items = document.querySelector(`.dimension-items[data-bottom="${bottom}"]`)
-        if (!items) {
-            items = this.createItems({ top, bottom })
-        }
-        const item = document.createElement('div')
-        item.className = 'dimension-item'
-        item.dataset.bottom = bottom
-        item.dataset.left = left
-        item.dataset.key = key
-        item.innerHTML = `<label class="dimension-label">标注：</label>
-            <div class="dimension-input" contenteditable>&nbsp;</div>`
-        items.appendChild(item)
-        this.toggleActiveItem(item)
-        return item
-    }
-    setItemsMarginTop (changeBottom) {
-        window.requestAnimationFrame(() => {
-            const index = Math.max(0, this.data.bottomList.indexOf(changeBottom))
-            const bottom = this.data.bottomList[index]
-            if (bottom) {
-                const items = document.querySelector(`.dimension-items[data-bottom="${bottom}"]`)
-                let { bottom: itemsBottom } = items.getBoundingClientRect()
-                for (let i = index + 1; i < this.data.bottomList.length; i++) {
-                    const items = document.querySelector(`.dimension-items[data-bottom="${this.data.bottomList[i]}"]`)
-                    let { top, bottom } = items.getBoundingClientRect()
-                    top -= 1
-                    let marginTop = parseFloat(items.style.marginTop)
-                    top -= marginTop
-                    bottom -= marginTop
-                    marginTop = Math.max(0, itemsBottom - top)
-                    itemsBottom = bottom + marginTop
-                    items.style.marginTop = `${marginTop}px`
-                }
-            }
-        })
-    }
-    createItems({ top, bottom }) {
-        const items = document.createElement('div')
-        items.className = 'dimension-items'
-        items.dataset.bottom = bottom
-        items.style.top = `${top}px`
-        items.style.marginTop = `${0}px`
-        this.elem.list.appendChild(items)
-        this.setItemsMarginTop(this.data.bottomList[Math.max(0, this.data.bottomList.indexOf(bottom) - 1)])
-        const config = {
-            childList: true,
-            characterData: true,
-            subtree: true
-        }
-        const callback = () => {
-            this.setItemsMarginTop(bottom)
-        }
-        const observer = new MutationObserver(callback)
-        observer.observe(items, config)
-        return items
     }
     // 删除标注
     remove() {
