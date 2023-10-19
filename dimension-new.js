@@ -1,4 +1,5 @@
 import Callout from './callout.js'
+import utils from './utils.js'
 class Dimension {
     constructor(options) {
         this.options = Object.assign({
@@ -6,10 +7,6 @@ class Dimension {
             output: '.dimension-text',
             nodeName: 'dimension',
         }, options)
-        this.data = {
-            bottomData: {},
-            bottomList: []
-        }
         this.elem = {
             entry: document.querySelector(this.options.entry),
             output: document.querySelector(this.options.output),
@@ -19,15 +16,27 @@ class Dimension {
         this.current = {
             key: null
         }
-        this.activeItem = null
         this.initElem()
-        // this.bindEvent()
-        this.callout = new Callout()
+        this.callout = new Callout({
+            onActive: this.onActive
+        })
         document.addEventListener('keyup', e => {
             if (e.code === 'KeyQ') {
                 this.add()
             }
         })
+    }
+    onActive (newKey, oldKey) {
+        if (oldKey) {
+            Array.from(document.querySelectorAll(`dimension[data-key*="${oldKey}"]`)).forEach(elem => {
+                elem.classList.remove('active')
+            })
+        }
+        if (newKey) {
+            Array.from(document.querySelectorAll(`dimension[data-key*="${newKey}"]`)).forEach(elem => {
+                elem.classList.add('active')
+            })
+        }
     }
     initElem() {
         if (!this.elem.lines) {
@@ -40,17 +49,6 @@ class Dimension {
             list.className = 'dimension-list'
             this.elem.output.appendChild(list)
         }
-    }
-    bindEvent() {
-        this.elem.output.addEventListener('click', e => {
-            let target = e.target
-            let hasItem = false
-            while (target && !hasItem) {
-                hasItem = target.className.includes('dimension-item')
-                !hasItem && (target = target.parentElement)
-            }
-            this.toggleActiveItem(hasItem ? target : null)
-        })
     }
     // 新增标注
     add(key = Date.now()) {
@@ -142,20 +140,18 @@ class Dimension {
     }
     // 新增标注块
     addOutputItem(node, key) {
+        key = `${key}`
         window.requestAnimationFrame(() => {
-            const { top, bottom, right } = node.getBoundingClientRect()
-            const { top: linesTop, left: linesLeft } = this.elem.lines.getBoundingClientRect()
+            const { top, bottom, right } = utils.getBoundingClientRect(node)
+            const { top: linesTop, left: linesLeft } = utils.getBoundingClientRect(this.elem.lines)
             this.callout.addBox({ bottom, top: top - linesTop, left: right - linesLeft, key }, { top: bottom - linesTop })
         })
     }
     // 删除标注
     remove() {
-        if (this.activeItem) {
-            const { bottom, left, key } = this.activeItem.dataset
+        this.callout.removeBox(({ key }) => {
             const sides = document.querySelectorAll(`.dimension-side[data-key="${key}"]`)
             const dimensions = document.querySelectorAll(`dimension[data-key*="${key}"]`)
-            const nextItem = this.activeItem.nextElementSibling
-            const parent = this.activeItem.parentElement
             Array.from(sides).forEach(elem => elem.remove())
             Array.from(dimensions).forEach(elem => {
                 const newKey = elem.dataset.key.split(',').filter(key1 => key1 !== key).join(',')
@@ -170,46 +166,7 @@ class Dimension {
                     elem.remove()
                 }
             })
-            this.activeItem.remove()
-            if (nextItem) {
-                this.toggleActiveItem(nextItem)
-            }
-            const line = this.getLineByBottom(bottom)
-            if (!parent.children.length) {
-                this.data.bottomList.splice(this.data.bottomList.indexOf(+bottom), 1)
-                parent.remove()
-                line.remove()
-                this.activeItem = null
-            } else {
-                const leftList = line.dataset.left.split(',')
-                leftList.splice(leftList.indexOf(left), 1)
-                line.style.left = `${leftList.sort((a, b) => a - b)[0]}px`
-                line.dataset.left = leftList.join(',')
-            }
-        }
-    }
-    // 更改选中状态
-    toggleActiveItem(elem) {
-        if (this.activeItem) {
-            this.activeItem.classList.remove('active')
-            this.getLineByBottom(this.activeItem.dataset.bottom).classList.remove('active')
-        }
-        if (elem) {
-            this.activeItem = elem
-            this.activeItem.classList.add('active')
-            this.getLineByBottom(this.activeItem.dataset.bottom).classList.add('active')
-            this.activeItem.querySelector('.dimension-input').focus()
-        } else {
-            this.activeItem = null
-        }
-    }
-    // 获取指定data-bottom的底线节点
-    getLineByBottom(bottom) {
-        return document.querySelector(`.dimension-line[data-bottom="${bottom}"]`)
-    }
-    // 获取指定位置的底线节点
-    getLineByIndex(index) {
-        return document.querySelector(`.dimension-line:nth-child(${index})`)
+        })
     }
     // 获取框选开始到结束的节点集合
     getChildNodes(node, startNode, endNode, list = [], isParent = true) {
@@ -233,7 +190,6 @@ class Dimension {
     isValidNode(node) {
         return node.nodeType === Node.TEXT_NODE ? !!node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2') : true
     }
-    //
     mount () {
         Array.from(this.elem.entry.children).forEach(elem => {
             if (elem.innerText.match('<dimension data-key')) {
