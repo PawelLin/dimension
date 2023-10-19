@@ -16,7 +16,7 @@
             position: relative;
             background-color: #ffd5d5;
         }
-        dimension.active {
+        dimension.active, dimension.active dimension {
             background-color: #ffa8a8;
         }
         .dimension-button {
@@ -80,6 +80,7 @@
         }
         .dimension-item {
             /* margin-bottom: 5px; */
+            position: relative;
             padding: 5px;
             font-size: 12px;
             border-radius: 5px;
@@ -98,6 +99,22 @@
         }
         .dimension-input {
             outline: 0;
+        }
+        .dimension-item-line {
+            position: absolute;
+            left: -1px;
+            border-left: 1px dashed #f01201;
+        }
+        .dimension-item.active .dimension-item-line {
+            border-left-style: solid;
+        }
+        .dimension-item-line.top {
+            top: 10px;
+            transform-origin: right top;
+        }
+        .dimension-item-line.bottom {
+            bottom: calc(100% - 10px);
+            transform-origin: right bottom;
         }
         #tip-btn {
             color: #f01201;

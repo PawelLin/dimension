@@ -43,6 +43,43 @@ class CalloutLine {
         return this.elem
     }
 }
+class CalloutItemLine {
+    constructor (options) {
+        this.options = Object.assign({
+            className: 'dimension-item-line',
+            bottom: 0
+        }, options)
+        this.elem = this.init()
+    }
+    init () {
+        const { className } = this.options
+        const elem = document.createElement('div')
+        elem.className = className
+        return elem
+    }
+    update () {
+        const { top } = utils.getBoundingClientRect(this.elem)
+        const distance = this.options.bottom - top
+        const side1 = 30
+        const side2 = Math.abs(distance)
+        const height = Math.sqrt(side1 ** 2 + side2 ** 2)
+        let deg = 0
+        console.log(distance, top)
+        if (distance >= 0) {
+            deg = Math.atan(side1 / side2) * 180 / Math.PI
+            this.elem.classList.remove('bottom')
+            this.elem.classList.add('top')
+        } else {
+            this.elem.classList.remove('top')
+            this.elem.classList.add('bottom')
+        }
+        this.elem.style.height = `${height}px`
+        this.elem.style.transform = `rotate(${deg}deg)`
+    }
+    getElem () {
+        return this.elem
+    }
+}
 class CalloutItem {
     constructor(options) {
         this.options = Object.assign({
@@ -52,8 +89,7 @@ class CalloutItem {
             left: 0,
             key: '',
             template: `<label class="dimension-label">标注：</label>
-            <div class="dimension-input" contenteditable>&nbsp;</div>
-            <div class="dimension-item-line"></div>`
+            <div class="dimension-input" contenteditable>&nbsp;</div>`
         }, options)
         this.elem = this.init()
     }
@@ -72,10 +108,16 @@ class CalloutItem {
         elem.dataset.left = left
         elem.dataset.key = key
         elem.innerHTML = template
+        const line = this.line = new CalloutItemLine({ bottom })
+        const lineElem = line.getElem()
+        elem.append(lineElem)
         return elem
     }
     remove() {
         this.elem.remove()
+    }
+    updateLine () {
+        this.line.update()
     }
     getOptions() {
         return this.options
@@ -129,7 +171,7 @@ class CalloutBox {
         return this.item[this.itemKeyList[index]] || this.item[this.itemKeyList[0]]
     }
     getItem(key) {
-        return this.item[key]
+        return key ? this.item[key] : this.item
     }
     observer(elem) {
         const { bottom, observe } = this.options
@@ -209,31 +251,43 @@ class Callout {
     unbindEvent() {
         document.removeEventListener('click', this.onItemClick)
     }
-    setBoxTop(changeBottom) {
-        window.requestAnimationFrame(() => {
-            const index = Math.max(0, this.bottomList.indexOf(changeBottom))
-            const bottom = this.bottomList[index]
-            if (bottom) {
-                const box = this.box[bottom].getElem()
-                let { bottom: boxBottom } = utils.getBoundingClientRect(box)
-                for (let i = index + 1; i < this.bottomList.length; i++) {
-                    const box = this.box[this.bottomList[i]].getElem()
-                    let { top, bottom } = utils.getBoundingClientRect(box)
-                    top -= 1
-                    let marginTop = parseFloat(box.style.marginTop)
-                    top -= marginTop
-                    bottom -= marginTop
-                    marginTop = Math.max(0, boxBottom - top)
-                    boxBottom = bottom + marginTop
-                    box.style.marginTop = `${marginTop}px`
-                }
+    updateElem (changeBottom) {
+        this.updateBoxTop(changeBottom)
+        this.updateItemLine(changeBottom)
+    }
+    updateBoxTop(changeBottom) {
+        const index = Math.max(0, this.bottomList.indexOf(changeBottom))
+        const bottom = this.bottomList[index]
+        if (bottom) {
+            const box = this.box[bottom].getElem()
+            let { bottom: boxBottom } = utils.getBoundingClientRect(box)
+            for (let i = index + 1; i < this.bottomList.length; i++) {
+                const box = this.box[this.bottomList[i]].getElem()
+                let { top, bottom } = utils.getBoundingClientRect(box)
+                top -= 1
+                let marginTop = parseFloat(box.style.marginTop)
+                top -= marginTop
+                bottom -= marginTop
+                marginTop = Math.max(0, boxBottom - top)
+                boxBottom = bottom + marginTop
+                box.style.marginTop = `${marginTop}px`
             }
-        })
+        }
+    }
+    updateItemLine (changeBottom) {
+        const index = Math.max(0, this.bottomList.indexOf(changeBottom))
+        const bottom = this.bottomList[index]
+        if (bottom) {
+            const item = this.box[bottom].getItem()
+            for(let key in item) {
+                item[key].updateLine()
+            }
+        }
     }
     addBox(data, lineData) {
         const { bottom, top, left, key } = data
         const { top: lineTop } = lineData
-        const box = this.box[bottom] = this.box[bottom] || new CalloutBox({ bottom, top, observe: this.setBoxTop.bind(this) })
+        const box = this.box[bottom] = this.box[bottom] || new CalloutBox({ bottom, top, observe: this.updateElem.bind(this) })
         const line = this.line[bottom] = this.line[bottom] || new CalloutLine({ bottom, top: lineTop, left })
         const index = utils.getClosestIndex(this.bottomList, bottom)
         if (!this.bottomList.includes(bottom)) {
@@ -248,25 +302,21 @@ class Callout {
             line.update({ left }, true)
         }
         this.toggleActive(box.addItem({ bottom, left, key }))
-        this.setBoxTop(this.bottomList[index])
-        console.log(this.bottomList)
-        console.log(this.box)
-        console.log(this.line)
+        this.updateElem(this.bottomList[index])
     }
     removeBox(callback) {
         if (this.activeItem) {
             const { bottom, key, left } = this.activeItem.getOptions()
             const nextItem = this.box[bottom].removeItem({ key, left })
+            this.isToggle = true
+            this.toggleActive(nextItem)
             if (nextItem) {
-                this.isToggle = true
-                this.toggleActive(nextItem)
                 this.line[bottom].update({ left }, false)
             } else {
                 this.bottomList.splice(this.bottomList.indexOf(bottom), 1)
                 this.line[bottom].remove()
                 delete this.line[bottom]
                 delete this.box[bottom]
-                this.activeItem = null
             }
             callback && callback({ key })
         }
