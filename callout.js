@@ -57,24 +57,28 @@ class CalloutItemLine {
         elem.className = className
         return elem
     }
-    update () {
-        const { top } = utils.getBoundingClientRect(this.elem)
-        const distance = this.options.bottom - top
+    update (top) {
+        const gap
+         = 10
+        const distance = this.options.bottom - top - gap
         const side1 = 30
         const side2 = Math.abs(distance)
         const height = Math.sqrt(side1 ** 2 + side2 ** 2)
-        let deg = 0
-        console.log(distance, top)
+        const deg = Math.atan(side1 / side2) * 180 / Math.PI
+        this.elem.style.height = `${height}px`
         if (distance >= 0) {
-            deg = Math.atan(side1 / side2) * 180 / Math.PI
             this.elem.classList.remove('bottom')
             this.elem.classList.add('top')
+            this.elem.style.top = `${gap}px`
+            this.elem.style.bottom = ''
+            this.elem.style.transform = `rotate(${deg}deg)`
         } else {
             this.elem.classList.remove('top')
             this.elem.classList.add('bottom')
+            this.elem.style.bottom = `calc(100% - ${gap}px)`
+            this.elem.style.top = ''
+            this.elem.style.transform = `rotate(${-deg}deg)`
         }
-        this.elem.style.height = `${height}px`
-        this.elem.style.transform = `rotate(${deg}deg)`
     }
     getElem () {
         return this.elem
@@ -117,7 +121,8 @@ class CalloutItem {
         this.elem.remove()
     }
     updateLine () {
-        this.line.update()
+        const { top } = utils.getBoundingClientRect(this.elem)
+        this.line.update(top)
     }
     getOptions() {
         return this.options
@@ -276,9 +281,8 @@ class Callout {
     }
     updateItemLine (changeBottom) {
         const index = Math.max(0, this.bottomList.indexOf(changeBottom))
-        const bottom = this.bottomList[index]
-        if (bottom) {
-            const item = this.box[bottom].getItem()
+        for (let i = index; i < this.bottomList.length; i++) {
+            const item = this.box[this.bottomList[i]].getItem()
             for(let key in item) {
                 item[key].updateLine()
             }
@@ -298,11 +302,11 @@ class Callout {
             }
             this.options.container.insertBefore(box.getElem(), this.options.container.children[index + 1])
             this.options.lineContainer.insertBefore(line.getElem(), this.options.lineContainer.children[index + 1])
+            this.updateElem(this.bottomList[index])
         } else {
             line.update({ left }, true)
         }
         this.toggleActive(box.addItem({ bottom, left, key }))
-        this.updateElem(this.bottomList[index])
     }
     removeBox(callback) {
         if (this.activeItem) {
