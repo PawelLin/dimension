@@ -9,14 +9,11 @@ class Dimension {
         }, options)
         this.elem = {
             entry: document.querySelector(this.options.entry),
-            output: document.querySelector(this.options.output),
-            lines: document.querySelector('.dimension-lines'),
-            list: document.querySelector('.dimension-list')
+            output: document.querySelector(this.options.output)
         }
         this.current = {
             key: null
         }
-        this.initElem()
         this.callout = new Callout({
             onActive: this.onActive
         })
@@ -36,18 +33,6 @@ class Dimension {
             Array.from(document.querySelectorAll(`dimension[data-key*="${newKey}"]`)).forEach(elem => {
                 elem.classList.add('active')
             })
-        }
-    }
-    initElem() {
-        if (!this.elem.lines) {
-            const lines = this.elem.lines = document.createElement('div')
-            lines.className = 'dimension-lines'
-            this.elem.output.appendChild(lines)
-        }
-        if (!this.elem.list) {
-            const list = this.elem.list = document.createElement('div')
-            list.className = 'dimension-list'
-            this.elem.output.appendChild(list)
         }
     }
     // 新增标注
@@ -140,11 +125,8 @@ class Dimension {
     }
     // 新增标注块
     addOutputItem(node, key) {
-        key = `${key}`
         window.requestAnimationFrame(() => {
-            const { top, bottom, right } = utils.getBoundingClientRect(node)
-            const { top: linesTop, left: linesLeft } = utils.getBoundingClientRect(this.elem.lines)
-            this.callout.addBox({ bottom, top: top - linesTop, left: right - linesLeft, key }, { top: bottom - linesTop })
+            this.callout.addBox(node, `${key}`)
         })
     }
     // 删除标注
@@ -167,6 +149,9 @@ class Dimension {
                 }
             })
         })
+    }
+    getData () {
+        this.callout.getItemValue()
     }
     // 获取框选开始到结束的节点集合
     getChildNodes(node, startNode, endNode, list = [], isParent = true) {

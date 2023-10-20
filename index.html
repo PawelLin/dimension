@@ -126,6 +126,7 @@
         <button id="add-btn">标注</button>
         <button id="del-btn">删除</button>
         <button id="mount-btn">回显</button>
+        <button id="data-btn">数据</button>
         <span id="tip-btn"></span>
     </div>
     <div class="dimension-main">
@@ -145,8 +146,8 @@
             <div>00000</div>
         </div>
         <div class="dimension-text">
-            <div class="dimension-lines"></div>
-            <div class="dimension-list"></div>
+            <!-- <div class="dimension-lines"></div>
+            <div class="dimension-list"></div> -->
         </div>
     </div>
     <script>
@@ -183,6 +184,9 @@
         })
         document.querySelector('#mount-btn').addEventListener('click', () => {
             dimension.mount()
+        })
+        document.querySelector('#data-btn').addEventListener('click', () => {
+            dimension.getData()
         })
     </script>
 </body>

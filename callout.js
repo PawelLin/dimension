@@ -2,8 +2,8 @@ import utils from './utils.js'
 class CalloutLine {
     constructor(options) {
         this.options = Object.assign({
-            className: 'dimension-line',
-            activeClass: 'active',
+            className: '',
+            activeClass: '',
             top: 0,
             bottom: 0,
             left: 0
@@ -36,30 +36,26 @@ class CalloutLine {
     remove() {
         this.elem.remove()
     }
-    getOptions() {
-        return this.options
-    }
     getElem() {
         return this.elem
     }
 }
 class CalloutItemLine {
-    constructor (options) {
+    constructor(options) {
         this.options = Object.assign({
-            className: 'dimension-item-line',
+            className: '',
             bottom: 0
         }, options)
         this.elem = this.init()
     }
-    init () {
+    init() {
         const { className } = this.options
         const elem = document.createElement('div')
         elem.className = className
         return elem
     }
-    update (top) {
-        const gap
-         = 10
+    update(top) {
+        const gap = 10
         const distance = this.options.bottom - top - gap
         const side1 = 30
         const side2 = Math.abs(distance)
@@ -80,6 +76,50 @@ class CalloutItemLine {
             this.elem.style.transform = `rotate(${-deg}deg)`
         }
     }
+    getElem() {
+        return this.elem
+    }
+}
+class CalloutItemForm {
+    constructor (options) {
+        this.options = Object.assign({
+            labelClass: '',
+            inputClass: '',
+            label: '',
+            value: ''
+        }, options)
+        this.elem = this.init()
+    }
+    init () {
+        const elem = document.createElement('div')
+        const label = this.createLabel()
+        const input = this.inputElem = this.createInput()
+        elem.appendChild(label)
+        elem.appendChild(input)
+        return elem
+    }
+    createLabel () {
+        const elem = document.createElement('div')
+        elem.className = this.options.labelClass
+        elem.innerHTML = this.options.label
+        return elem
+    }
+    createInput () {
+        const elem = document.createElement('div')
+        elem.className = this.options.inputClass
+        elem.setAttribute('contenteditable', '')
+        elem.innerText = this.options.value
+        return elem
+    }
+    inputFocus () {
+        this.inputElem.focus()
+        const selection = window.getSelection()
+        selection.selectAllChildren(this.inputElem)
+        selection.collapseToEnd()
+    }
+    getValue () {
+        return this.inputElem.innerText
+    }
     getElem () {
         return this.elem
     }
@@ -87,42 +127,51 @@ class CalloutItemLine {
 class CalloutItem {
     constructor(options) {
         this.options = Object.assign({
-            className: 'dimension-item',
-            activeClass: 'active',
+            className: '',
+            activeClass: '',
+            lineClass: '',
+            labelClass: '',
+            inputClass: '',
             bottom: 0,
             left: 0,
             key: '',
-            template: `<label class="dimension-label">标注：</label>
-            <div class="dimension-input" contenteditable>&nbsp;</div>`
+            value: '',
+            label: ''
         }, options)
         this.elem = this.init()
     }
     active() {
         this.elem.classList.add(this.options.activeClass)
-        this.elem.querySelector('.dimension-input').focus()
+        this.form.inputFocus()
     }
     inactive() {
         this.elem.classList.remove(this.options.activeClass)
     }
     init() {
-        const { className, bottom, left, key, template } = this.options
+        const { className, inputClass, lineClass, labelClass, bottom, left, key, value, label } = this.options
         const elem = document.createElement('div')
         elem.className = className
         elem.dataset.bottom = bottom
         elem.dataset.left = left
         elem.dataset.key = key
-        elem.innerHTML = template
-        const line = this.line = new CalloutItemLine({ bottom })
-        const lineElem = line.getElem()
+        const formElem = (this.form = new CalloutItemForm({ labelClass, label, inputClass, value })).getElem()
+        const lineElem = (this.line = new CalloutItemLine({ className: lineClass, bottom })).getElem()
+        elem.append(formElem)
         elem.append(lineElem)
         return elem
     }
     remove() {
         this.elem.remove()
     }
-    updateLine () {
+    updateLine() {
         const { top } = utils.getBoundingClientRect(this.elem)
         this.line.update(top)
+    }
+    getInputValue () {
+        return {
+            key: this.options.key,
+            value: this.form.getValue()
+        }
     }
     getOptions() {
         return this.options
@@ -134,7 +183,7 @@ class CalloutItem {
 class CalloutBox {
     constructor(options) {
         this.options = Object.assign({
-            className: 'dimension-items',
+            className: '',
             bottom: 0,
             top: 0,
             observe: null
@@ -154,8 +203,8 @@ class CalloutBox {
         this.observer(elem)
         return elem
     }
-    addItem({ bottom, left, key }) {
-        const item = this.item[key] = new CalloutItem({ bottom, left, key })
+    addItem({ className, lineClass, labelClass, inputClass, activeClass, bottom, left, key, value, label }) {
+        const item = this.item[key] = new CalloutItem({ className, lineClass, labelClass, inputClass, activeClass, bottom, left, key, value, label })
         const index = utils.getClosestIndex(this.itemLeftList, left)
         if (index > -1) {
             this.itemLeftList.splice(index + 1, 0, left)
@@ -167,10 +216,10 @@ class CalloutBox {
         this.elem.insertBefore(item.getElem(), this.elem.children[index + 1])
         return item
     }
-    removeItem({ left, key }) {
-        const index = this.itemLeftList.indexOf(left)
-        this.itemLeftList.splice(index, 1)
+    removeItem({ key }) {
+        const index = this.itemKeyList.indexOf(key)
         this.itemKeyList.splice(index, 1)
+        this.itemLeftList.splice(index, 1)
         this.item[key].remove()
         delete this.item[key]
         return this.item[this.itemKeyList[index]] || this.item[this.itemKeyList[0]]
@@ -201,9 +250,20 @@ class Callout {
     constructor(options) {
         const { onActive, ...options1 } = options
         this.options = Object.assign({
-            container: document.querySelector('.dimension-list'),
-            lineContainer: document.querySelector('.dimension-lines')
+            container: '.dimension-text',
+            boxContainerClass: 'dimension-list',
+            lineContainerClass: 'dimension-lines',
+            boxClass: 'dimension-items',
+            boxItemClass: 'dimension-item',
+            boxItemActiveClass: 'active',
+            boxItemLineClass: 'dimension-item-line',
+            boxItemLabelClass: 'dimension-label',
+            boxItemInputClass: 'dimension-input',
+            lineClass: 'dimension-line',
+            lineActiveClass: 'active',
+            label: '标注'
         }, options1)
+        this.elem = this.getElem(this.options)
         this.line = {}
         this.box = {}
         this.bottomList = []
@@ -211,6 +271,18 @@ class Callout {
         this.onItemClick = this.onClick.bind(this)
         this.onActive = onActive
         this.bindEvent()
+    }
+    getElem ({ container, boxContainerClass, lineContainerClass }) {
+        container = container instanceof Element ? container : document.querySelector(container)
+        container.innerHTML = `
+            <div class="${lineContainerClass}"></div>
+            <div class="${boxContainerClass}"></div>
+        `
+        return {
+            container,
+            boxContainer: container.querySelector(`.${boxContainerClass}`),
+            lineContainer: container.querySelector(`.${lineContainerClass}`),
+        }
     }
     onClick(e) {
         if (this.isToggle) {
@@ -231,6 +303,7 @@ class Callout {
         this.toggleActive(activeItem)
     }
     toggleActive(activeItem) {
+        if (activeItem && activeItem === this.activeItem) return
         let oldKey = ''
         let newKey = ''
         if (this.activeItem) {
@@ -256,7 +329,7 @@ class Callout {
     unbindEvent() {
         document.removeEventListener('click', this.onItemClick)
     }
-    updateElem (changeBottom) {
+    updateElem(changeBottom) {
         this.updateBoxTop(changeBottom)
         this.updateItemLine(changeBottom)
     }
@@ -279,20 +352,21 @@ class Callout {
             }
         }
     }
-    updateItemLine (changeBottom) {
+    updateItemLine(changeBottom) {
         const index = Math.max(0, this.bottomList.indexOf(changeBottom))
         for (let i = index; i < this.bottomList.length; i++) {
             const item = this.box[this.bottomList[i]].getItem()
-            for(let key in item) {
+            for (let key in item) {
                 item[key].updateLine()
             }
         }
     }
-    addBox(data, lineData) {
-        const { bottom, top, left, key } = data
-        const { top: lineTop } = lineData
-        const box = this.box[bottom] = this.box[bottom] || new CalloutBox({ bottom, top, observe: this.updateElem.bind(this) })
-        const line = this.line[bottom] = this.line[bottom] || new CalloutLine({ bottom, top: lineTop, left })
+    addBox(node, key, value = '') {
+        const { top, bottom, right } = utils.getBoundingClientRect(node)
+        const { top: linesTop, left: linesLeft } = utils.getBoundingClientRect(this.elem.lineContainer)
+        const left = right - linesLeft
+        const box = this.createBox({ bottom, top: top - linesTop, observe: this.updateElem.bind(this) })
+        const line = this.createLine({ bottom, top: bottom - linesTop, left })
         const index = utils.getClosestIndex(this.bottomList, bottom)
         if (!this.bottomList.includes(bottom)) {
             if (index > -1) {
@@ -300,18 +374,18 @@ class Callout {
             } else {
                 this.bottomList.unshift(bottom)
             }
-            this.options.container.insertBefore(box.getElem(), this.options.container.children[index + 1])
-            this.options.lineContainer.insertBefore(line.getElem(), this.options.lineContainer.children[index + 1])
+            this.elem.boxContainer.insertBefore(box.getElem(), this.elem.boxContainer.children[index + 1])
+            this.elem.lineContainer.insertBefore(line.getElem(), this.elem.lineContainer.children[index + 1])
             this.updateElem(this.bottomList[index])
         } else {
             line.update({ left }, true)
         }
-        this.toggleActive(box.addItem({ bottom, left, key }))
+        this.toggleActive(this.createItem(box, { bottom, left, key, value }))
     }
     removeBox(callback) {
         if (this.activeItem) {
             const { bottom, key, left } = this.activeItem.getOptions()
-            const nextItem = this.box[bottom].removeItem({ key, left })
+            const nextItem = this.box[bottom].removeItem({ key })
             this.isToggle = true
             this.toggleActive(nextItem)
             if (nextItem) {
@@ -324,6 +398,43 @@ class Callout {
             }
             callback && callback({ key })
         }
+    }
+    createBox (params) {
+        const bottom = params.bottom
+        return this.box[bottom] = this.box[bottom] || new CalloutBox({
+            ...params,
+            className: this.options.boxClass
+        })
+    }
+    createItem (box, params) {
+        return box.addItem({
+            ...params,
+            className: this.options.boxItemClass,
+            lineClass: this.options.boxItemLineClass,
+            inputClass: this.options.boxItemInputClass,
+            activeClass: this.options.boxItemActiveClass,
+            labelClass: this.options.boxItemLabelClass,
+            label: this.options.label
+        })
+    }
+    createLine (params) {
+        const bottom = params.bottom
+        return this.line[bottom] = this.line[bottom] || new CalloutLine({
+            ...params,
+            className: this.options.lineClass,
+            activeClass: this.options.lineActiveClass
+        })
+    }
+    getItemValue () {
+        const data = {}
+        this.bottomList.forEach(bottom => {
+            const item = this.box[bottom].getItem()
+            for (let key in item) {
+                const { key: inputKey, value: inputValue } = item[key].getInputValue()
+                data[inputKey] = inputValue
+            }
+        })
+        return data
     }
     getItemByBottomKey({ bottom, key }) {
         return this.box[bottom].getItem(key)
