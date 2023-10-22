@@ -42,28 +42,30 @@
             content: '}';
             margin-left: -0.2em;
         }
-        .dimension-main {
-            display: flex;
-        }
         .dimension-contain {
-            flex: 1;
+            position: relative;
             padding: 10px;
             font-size: 30px;
         }
         .dimension-text {
-            position: relative;
-            padding: 0 5px 0 30px;
-            width: 240px;
+            position: absolute;
+            top: 0;
+            height: 100%;
             background-color: #f4f4f4;
+        }
+        .dimension-text.left {
+            left: 0;
+            padding: 0 30px 0 5px;
+        }
+        .dimension-text.right {
+            right: 0;
+            padding: 0 5px 0 30px;
         }
         .dimension-lines {
             position: absolute;
-            left: 0;
         }
         .dimension-line {
             position: absolute;
-            right: 0;
-            left: -100px;
             border-bottom: 1px dashed #f01201;
         }
         .dimension-line.active {
@@ -102,11 +104,11 @@
         }
         .dimension-item-line {
             position: absolute;
-            left: -1px;
+            /* left: -1px; */
             border-left: 1px dashed #f01201;
         }
         .dimension-item.active .dimension-item-line {
-            left: -2px;
+            /* left: -2px; */
             border-left-width: 2px;
             border-left-style: solid;
         }
@@ -116,9 +118,6 @@
         .dimension-item-line.bottom {
             transform-origin: right bottom;
         }
-        #tip-btn {
-            color: #f01201;
-        }
     </style>
 </head>
 <body>
@@ -127,28 +126,28 @@
         <button id="del-btn">删除</button>
         <button id="mount-btn">回显</button>
         <button id="data-btn">数据</button>
-        <span id="tip-btn"></span>
+        <button id="resize-btn">窗口</button>
+        <button id="left-btn">左边</button>
+        <button id="right-btn">右边</button>
     </div>
-    <div class="dimension-main">
-        <div class="dimension-contain">
-            <div>
-                <p>0</p>
-                <p>111111</p>
-                <p style="font-size: 50px;">2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
-                <p>3333<span>123x</span>33</p>
-                <p>444444</p>
-                <p>555555</p>
-                <p>666666</p>
-                <p>777777</p>
-                <p>888888</p>
-                <p>999999</p>
-            </div>
-            <div>00000</div>
+    <div class="dimension-contain">
+        <div>
+            <p>0</p>
+            <p>111111</p>
+            <p style="font-size: 50px;">2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
+            <p>3333<span>123x</span>33</p>
+            <p>444444</p>
+            <p>555555</p>
+            <p>666666</p>
+            <p>777777</p>
+            <p>888888</p>
+            <p>999999</p>
         </div>
-        <div class="dimension-text">
+        <div>00000</div>
+        <!-- <div class="dimension-text"> -->
             <!-- <div class="dimension-lines"></div>
             <div class="dimension-list"></div> -->
-        </div>
+        <!-- </div> -->
     </div>
     <script>
         (function () {
@@ -172,9 +171,8 @@
     </script>
     <script type="module">
         import Dimension from './dimension-new.js'
-        const dimension = new Dimension({
-            entry: '.dimension-contain',
-            output: '.dimension-text',
+        const dimension = new Dimension('.dimension-contain', {
+            resize: true
         })
         document.querySelector('#add-btn').addEventListener('click', () => {
             dimension.add()
@@ -187,6 +185,15 @@
         })
         document.querySelector('#data-btn').addEventListener('click', () => {
             dimension.getData()
+        })
+        document.querySelector('#resize-btn').addEventListener('click', () => {
+            dimension.resize()
+        })
+        document.querySelector('#left-btn').addEventListener('click', () => {
+            dimension.changeDirection('left')
+        })
+        document.querySelector('#right-btn').addEventListener('click', () => {
+            dimension.changeDirection('right')
         })
     </script>
 </body>

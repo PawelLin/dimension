@@ -1,9 +1,11 @@
 import utils from './utils.js'
 class CalloutLine {
-    constructor(options) {
+    constructor(options, initOptions = {}) {
+        const { lineClass: className = '', lineActiveClass: activeClass = '', direction } = initOptions
         this.options = Object.assign({
-            className: '',
-            activeClass: '',
+            className,
+            activeClass,
+            direction,
             top: 0,
             bottom: 0,
             left: 0
@@ -12,11 +14,12 @@ class CalloutLine {
         this.leftList = [this.options.left]
     }
     init() {
-        const { className, top, left } = this.options
+        const { className, top, left, direction } = this.options
         const elem = document.createElement('div')
         elem.className = className
         elem.style.top = `${top}px`
-        elem.style.left = `${left}px`
+        elem.style[direction] = 0
+        elem.style[utils.leftRightReplace(direction)] = `${-Math.abs(left)}px`
         return elem
     }
     active() {
@@ -31,7 +34,8 @@ class CalloutLine {
         } else {
             this.leftList.splice(this.leftList.indexOf(left), 1)
         }
-        this.elem.style.left = `${Math.min(...this.leftList)}px`
+        this.leftList.sort((a, b) => Math.abs(b) - Math.abs(a))
+        this.elem.style[utils.leftRightReplace(this.options.direction)] = `-${Math.abs(this.leftList[0])}px`
     }
     remove() {
         this.elem.remove()
@@ -41,9 +45,12 @@ class CalloutLine {
     }
 }
 class CalloutItemLine {
-    constructor(options) {
+    constructor(options, initOptions = {}) {
+        const { itemLineClass: className = '', itemLineGap: gap = 0, direction } = initOptions
         this.options = Object.assign({
-            className: '',
+            className,
+            gap,
+            direction,
             bottom: 0
         }, options)
         this.elem = this.init()
@@ -54,25 +61,24 @@ class CalloutItemLine {
         elem.className = className
         return elem
     }
-    update(top) {
-        const gap = 10
+    update({ top, ...data }) {
+        const { gap, direction } = this.options
         const distance = this.options.bottom - top - gap
-        const side1 = 30
+        const side1 = data[utils.leftRightReplace(direction)]
         const side2 = Math.abs(distance)
-        const height = Math.sqrt(side1 ** 2 + side2 ** 2)
+        const height = Math.sqrt(Math.abs(side1) ** 2 + side2 ** 2)
         const deg = Math.atan(side1 / side2) * 180 / Math.PI
         this.elem.style.height = `${height}px`
+        this.elem.style[utils.leftRightReplace(direction)] = `-1px`
         if (distance >= 0) {
-            this.elem.classList.remove('bottom')
-            this.elem.classList.add('top')
             this.elem.style.top = `${gap}px`
             this.elem.style.bottom = ''
+            this.elem.style.transformOrigin = 'right top'
             this.elem.style.transform = `rotate(${deg}deg)`
         } else {
-            this.elem.classList.remove('top')
-            this.elem.classList.add('bottom')
             this.elem.style.bottom = `calc(100% - ${gap}px)`
             this.elem.style.top = ''
+            this.elem.style.transformOrigin = 'right bottom'
             this.elem.style.transform = `rotate(${-deg}deg)`
         }
     }
@@ -81,11 +87,12 @@ class CalloutItemLine {
     }
 }
 class CalloutItemForm {
-    constructor (options) {
+    constructor (options, initOptions = {}) {
+        const { itemLabelClass: labelClass = '', itemInputClass: inputClass = '', itemLabel: label = '' } = initOptions
         this.options = Object.assign({
-            labelClass: '',
-            inputClass: '',
-            label: '',
+            labelClass,
+            inputClass,
+            label,
             value: ''
         }, options)
         this.elem = this.init()
@@ -99,17 +106,22 @@ class CalloutItemForm {
         return elem
     }
     createLabel () {
-        const elem = document.createElement('div')
+        const elem = this.labelElem = document.createElement('div')
         elem.className = this.options.labelClass
         elem.innerHTML = this.options.label
         return elem
     }
     createInput () {
-        const elem = document.createElement('div')
+        const elem = this.inputElem = document.createElement('div')
         elem.className = this.options.inputClass
         elem.setAttribute('contenteditable', '')
         elem.innerText = this.options.value
+        elem.addEventListener('input', () => this.updateInput())
         return elem
+    }
+    updateInput () {
+        const paddingLeft = this.inputElem.innerText ? 0 : this.labelElem.offsetWidth
+        this.inputElem.style.paddingLeft = `${paddingLeft}px`
     }
     inputFocus () {
         this.inputElem.focus()
@@ -125,37 +137,35 @@ class CalloutItemForm {
     }
 }
 class CalloutItem {
-    constructor(options) {
+    constructor(options, initOptions = {}) {
+        const { itemClass: className = '', itemActiveClass: activeClass = '' } = this.initOptions = initOptions
         this.options = Object.assign({
-            className: '',
-            activeClass: '',
-            lineClass: '',
-            labelClass: '',
-            inputClass: '',
+            className,
+            activeClass,
             bottom: 0,
             left: 0,
             key: '',
             value: '',
-            label: ''
         }, options)
         this.elem = this.init()
     }
     active() {
         this.elem.classList.add(this.options.activeClass)
-        this.form.inputFocus()
+        this.form.updateInput()
+        // this.form.inputFocus()
     }
     inactive() {
         this.elem.classList.remove(this.options.activeClass)
     }
     init() {
-        const { className, inputClass, lineClass, labelClass, bottom, left, key, value, label } = this.options
+        const { className, bottom, left, key, value } = this.options
         const elem = document.createElement('div')
         elem.className = className
         elem.dataset.bottom = bottom
         elem.dataset.left = left
         elem.dataset.key = key
-        const formElem = (this.form = new CalloutItemForm({ labelClass, label, inputClass, value })).getElem()
-        const lineElem = (this.line = new CalloutItemLine({ className: lineClass, bottom })).getElem()
+        const formElem = (this.form = new CalloutItemForm({ value }, this.initOptions)).getElem()
+        const lineElem = (this.line = new CalloutItemLine({ bottom }, this.initOptions)).getElem()
         elem.append(formElem)
         elem.append(lineElem)
         return elem
@@ -164,8 +174,9 @@ class CalloutItem {
         this.elem.remove()
     }
     updateLine() {
-        const { top } = utils.getBoundingClientRect(this.elem)
-        this.line.update(top)
+        const { top, left, right } = utils.getBoundingClientRect(this.elem)
+        const { left: containerLeft, right: containerRight } = utils.getBoundingClientRect(this.initOptions.container)
+        this.line.update({ top, left: left - containerLeft, right: right - containerRight })
     }
     getInputValue () {
         return {
@@ -181,9 +192,10 @@ class CalloutItem {
     }
 }
 class CalloutBox {
-    constructor(options) {
+    constructor(options, initOptions = {}) {
+        const { boxClass: className = '' } = this.initOptions = initOptions
         this.options = Object.assign({
-            className: '',
+            className,
             bottom: 0,
             top: 0,
             observe: null
@@ -203,8 +215,9 @@ class CalloutBox {
         this.observer(elem)
         return elem
     }
-    addItem({ className, lineClass, labelClass, inputClass, activeClass, bottom, left, key, value, label }) {
-        const item = this.item[key] = new CalloutItem({ className, lineClass, labelClass, inputClass, activeClass, bottom, left, key, value, label })
+    addItem(options) {
+        const { left, key } = options
+        const item = this.item[key] = new CalloutItem(options, this.initOptions)
         const index = utils.getClosestIndex(this.itemLeftList, left)
         if (index > -1) {
             this.itemLeftList.splice(index + 1, 0, left)
@@ -248,20 +261,22 @@ class CalloutBox {
 }
 class Callout {
     constructor(options) {
+        console.log(options)
         const { onActive, ...options1 } = options
         this.options = Object.assign({
             container: '.dimension-text',
             boxContainerClass: 'dimension-list',
             lineContainerClass: 'dimension-lines',
             boxClass: 'dimension-items',
-            boxItemClass: 'dimension-item',
-            boxItemActiveClass: 'active',
-            boxItemLineClass: 'dimension-item-line',
-            boxItemLabelClass: 'dimension-label',
-            boxItemInputClass: 'dimension-input',
+            itemClass: 'dimension-item',
+            itemActiveClass: 'active',
+            itemLineClass: 'dimension-item-line',
+            itemLineGap: 10,
+            itemLabelClass: 'dimension-label',
+            itemInputClass: 'dimension-input',
+            itemLabel: '标注:&nbsp;',
             lineClass: 'dimension-line',
             lineActiveClass: 'active',
-            label: '标注'
         }, options1)
         this.elem = this.getElem(this.options)
         this.line = {}
@@ -272,10 +287,12 @@ class Callout {
         this.onActive = onActive
         this.bindEvent()
     }
-    getElem ({ container, boxContainerClass, lineContainerClass }) {
-        container = container instanceof Element ? container : document.querySelector(container)
+    getElem ({ container, boxContainerClass, lineContainerClass, direction }) {
+        if (typeof container === 'string') {
+            this.options.container = container = document.querySelector(container)
+        }
         container.innerHTML = `
-            <div class="${lineContainerClass}"></div>
+            <div class="${lineContainerClass}" style="${utils.leftRightReplace(direction)}: 0;"></div>
             <div class="${boxContainerClass}"></div>
         `
         return {
@@ -292,7 +309,7 @@ class Callout {
         let target = e.target
         let hasItem = false
         while (target && !hasItem) {
-            hasItem = target.classList.contains('dimension-item')
+            hasItem = target.classList.contains(this.options.itemClass)
             !hasItem && (target = target.parentElement)
         }
         let activeItem = null
@@ -328,6 +345,10 @@ class Callout {
     }
     unbindEvent() {
         document.removeEventListener('click', this.onItemClick)
+    }
+    clear () {
+        this.unbindEvent()
+        this.options.container.innerHTML = ''
     }
     updateElem(changeBottom) {
         this.updateBoxTop(changeBottom)
@@ -380,7 +401,7 @@ class Callout {
         } else {
             line.update({ left }, true)
         }
-        this.toggleActive(this.createItem(box, { bottom, left, key, value }))
+        this.toggleActive(box.addItem({ bottom, left, key, value }))
     }
     removeBox(callback) {
         if (this.activeItem) {
@@ -399,31 +420,13 @@ class Callout {
             callback && callback({ key })
         }
     }
-    createBox (params) {
-        const bottom = params.bottom
-        return this.box[bottom] = this.box[bottom] || new CalloutBox({
-            ...params,
-            className: this.options.boxClass
-        })
+    createBox (options) {
+        const { bottom } = options
+        return this.box[bottom] = this.box[bottom] || new CalloutBox(options, this.options)
     }
-    createItem (box, params) {
-        return box.addItem({
-            ...params,
-            className: this.options.boxItemClass,
-            lineClass: this.options.boxItemLineClass,
-            inputClass: this.options.boxItemInputClass,
-            activeClass: this.options.boxItemActiveClass,
-            labelClass: this.options.boxItemLabelClass,
-            label: this.options.label
-        })
-    }
-    createLine (params) {
-        const bottom = params.bottom
-        return this.line[bottom] = this.line[bottom] || new CalloutLine({
-            ...params,
-            className: this.options.lineClass,
-            activeClass: this.options.lineActiveClass
-        })
+    createLine (options) {
+        const { bottom } = options
+        return this.line[bottom] = this.line[bottom] || new CalloutLine(options, this.options)
     }
     getItemValue () {
         const data = {}

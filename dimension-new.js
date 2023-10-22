@@ -1,22 +1,35 @@
 import Callout from './callout.js'
 import utils from './utils.js'
 class Dimension {
-    constructor(options) {
-        this.options = Object.assign({
-            entry: '.dimension-contain',
-            output: '.dimension-text',
+    constructor(container, options) {
+        const { direction, width, calloutClass, resize } = this.options = Object.assign({
+            direction: 'right',
+            width: 300,
             nodeName: 'dimension',
+            calloutClass: 'dimension-text'
         }, options)
-        this.elem = {
-            entry: document.querySelector(this.options.entry),
-            output: document.querySelector(this.options.output)
+        this.container = typeof container === 'string' ? document.querySelector(container) : container
+        const { paddingLeft, paddingRight } = getComputedStyle(this.container)
+        this.containerPadding = { left: parseFloat(paddingLeft), right: parseFloat(paddingRight) }
+        this.container.style[`padding-${direction}`] = `${width + this.containerPadding[direction]}px`
+        this.calloutContainer = this.container.querySelector(`.${calloutClass}`)
+        if (!this.calloutContainer) {
+            this.calloutContainer = document.createElement('div')
+            this.container.appendChild(this.calloutContainer)
         }
+        this.calloutContainer.className = `${calloutClass} ${direction}`
+        this.calloutContainer.style.width = `${width}px`
         this.current = {
             key: null
         }
         this.callout = new Callout({
+            ...this.options,
             onActive: this.onActive
         })
+        if (resize) {
+            this.onResize = utils.debounce(this.resize.bind(this))
+            this.bindEvent()
+        }
         document.addEventListener('keyup', e => {
             if (e.code === 'KeyQ') {
                 this.add()
@@ -41,8 +54,9 @@ class Dimension {
         const { nodeName } = this.options
         const selection = window.getSelection()
         let { startContainer: startNode, endContainer: endNode, startOffset, endOffset } = selection.getRangeAt(0)
+        if (this.calloutContainer.contains(startNode)) return
         let elem = startNode
-        while (elem.parentElement !== this.elem.entry) {
+        while (elem.parentElement !== this.container) {
             elem = elem.parentElement
         }
         const list = this.getChildNodes(elem, startNode, endNode).filter(node => node.nodeType === Node.TEXT_NODE)
@@ -151,7 +165,8 @@ class Dimension {
         })
     }
     getData () {
-        this.callout.getItemValue()
+        const data = this.callout.getItemValue()
+        console.log(data)
     }
     // 获取框选开始到结束的节点集合
     getChildNodes(node, startNode, endNode, list = [], isParent = true) {
@@ -175,13 +190,46 @@ class Dimension {
     isValidNode(node) {
         return node.nodeType === Node.TEXT_NODE ? !!node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2') : true
     }
+    changeDirection (direction) {
+        this.callout.unbindEvent()
+        this.options.direction = direction
+        const direction1 = utils.leftRightReplace(direction)
+        const { width, calloutClass } = this.options
+        this.container.style[`padding-${direction}`] = `${width + this.containerPadding[direction]}px`
+        this.container.style[`padding-${direction1}`] = `${this.containerPadding[direction1]}px`
+        this.calloutContainer.className = `${calloutClass} ${direction}`
+        this.callout = new Callout({
+            ...this.options,
+            direction,
+            onActive: this.onActive
+        })
+        this.mountCallout()
+    }
+    resize () {
+        this.callout.unbindEvent()
+        this.callout = new Callout({
+            ...this.options,
+            onActive: this.onActive
+        })
+        this.mountCallout()
+    }
+    bindEvent () {
+        window.addEventListener('resize', this.onResize)
+    }
+    unbindEvent () {
+        this.callout.unbindEvent()
+        window.removeEventListener('resize', thi.onResize)
+    }
     mount () {
-        Array.from(this.elem.entry.children).forEach(elem => {
+        Array.from(this.container.children).forEach(elem => {
             if (elem.innerText.match('<dimension data-key')) {
                 elem.innerHTML = elem.innerText
+                this.mountCallout(elem)
             }
         })
-        Array.from(document.querySelectorAll('.dimension-side.end')).forEach(elem => {
+    }
+    mountCallout (elem = this.container) {
+        Array.from(elem.querySelectorAll('.dimension-side.end')).forEach(elem => {
             const keys = elem.dataset.key.split(',')
             keys.forEach(key => {
                 this.addOutputItem(elem, key)
