@@ -15,7 +15,7 @@ export default {
     getClosestIndex(list, value) {
         return list.findLastIndex((value1, index) => (value1 || value) <= value && (list[index + 1] || value) >= value)
     },
-    leftRightReplace (direction) {
+    reverseDirection (direction) {
         return direction === 'right' ? 'left' : 'right'
     },
     debounce (fn, delay = 300) {
@@ -23,7 +23,6 @@ export default {
         return function (...args) {
             timer && clearTimeout(timer)
             timer = setTimeout(() => {
-                console.log(delay)
                 timer = null
                 fn.apply(this, args)
             }, delay)

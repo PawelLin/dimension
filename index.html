@@ -12,116 +12,19 @@
         p {
             word-break: break-all;
         }
-        dimension {
-            position: relative;
-            background-color: #ffd5d5;
-        }
-        dimension.active, dimension.active dimension {
-            background-color: #ffa8a8;
-        }
-        .dimension-button {
+        .buttons {
             position: sticky;
             top: 0;
             padding: 10px;
             background-color: #fff;
             border-bottom: 1px solid #f4f4f4;
-            z-index: 1;
-        }
-        .dimension-side {
-            color: #f01201;
-        }
-        .dimension-side::before {
-            position: absolute;
-            z-index: 1;
-        }
-        .dimension-side.start::before {
-            content: '{';
-            margin-left: -0.1em;
-        }
-        .dimension-side.end::before {
-            content: '}';
-            margin-left: -0.2em;
-        }
-        .dimension-contain {
-            position: relative;
-            padding: 10px;
-            font-size: 30px;
-        }
-        .dimension-text {
-            position: absolute;
-            top: 0;
-            height: 100%;
-            background-color: #f4f4f4;
-        }
-        .dimension-text.left {
-            left: 0;
-            padding: 0 30px 0 5px;
-        }
-        .dimension-text.right {
-            right: 0;
-            padding: 0 5px 0 30px;
-        }
-        .dimension-lines {
-            position: absolute;
-        }
-        .dimension-line {
-            position: absolute;
-            border-bottom: 1px dashed #f01201;
-        }
-        .dimension-line.active {
-            border-bottom-style: solid;
-            border-bottom-width: 2px;
-        }
-        .dimension-list {
-            position: relative;
-        }
-        .dimension-items {
-            position: absolute;
-            margin-bottom: 1px;
-            width: 100%;
-        }
-        .dimension-item {
-            /* margin-bottom: 5px; */
-            position: relative;
-            padding: 5px;
-            font-size: 12px;
-            border-radius: 5px;
-            border: 1px solid #f01201;
-            background-color: #ffd5d5;
-        }
-        .dimension-item + .dimension-item {
-            margin-top: 1px;
-        }
-        .dimension-item.active {
-            outline: 1px solid #f01201;
-            background-color: #ffa8a8;
-        }
-        .dimension-label {
-            float: left;
-        }
-        .dimension-input {
-            outline: 0;
-        }
-        .dimension-item-line {
-            position: absolute;
-            /* left: -1px; */
-            border-left: 1px dashed #f01201;
-        }
-        .dimension-item.active .dimension-item-line {
-            /* left: -2px; */
-            border-left-width: 2px;
-            border-left-style: solid;
-        }
-        .dimension-item-line.top {
-            transform-origin: right top;
-        }
-        .dimension-item-line.bottom {
-            transform-origin: right bottom;
+            z-index: 2;
         }
     </style>
+    <link rel="stylesheet" href="./css/index.css">
 </head>
 <body>
-    <div class="dimension-button">
+    <div class="buttons">
         <button id="add-btn">标注</button>
         <button id="del-btn">删除</button>
         <button id="mount-btn">回显</button>
@@ -144,9 +47,9 @@
             <p>999999</p>
         </div>
         <div>00000</div>
-        <!-- <div class="dimension-text"> -->
-            <!-- <div class="dimension-lines"></div>
-            <div class="dimension-list"></div> -->
+        <!-- <div class="dimension-callout"> -->
+            <!-- <div class="dimension-line-container"></div>
+            <div class="dimension-box-container"></div> -->
         <!-- </div> -->
     </div>
     <script>
@@ -170,8 +73,9 @@
         })()
     </script>
     <script type="module">
-        import Dimension from './dimension-new.js'
+        import Dimension from './js/dimension.js'
         const dimension = new Dimension('.dimension-contain', {
+            direction: 'right',
             resize: true
         })
         document.querySelector('#add-btn').addEventListener('click', () => {

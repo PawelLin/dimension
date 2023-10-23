@@ -6,8 +6,10 @@ class Dimension {
             direction: 'right',
             width: 300,
             nodeName: 'dimension',
-            calloutClass: 'dimension-text'
-        }, options)
+            calloutClass: 'dimension-callout'
+        }, options, {
+            reverseDirection: utils.reverseDirection(options.direction || 'right')
+        })
         this.container = typeof container === 'string' ? document.querySelector(container) : container
         const { paddingLeft, paddingRight } = getComputedStyle(this.container)
         this.containerPadding = { left: parseFloat(paddingLeft), right: parseFloat(paddingRight) }
@@ -17,12 +19,12 @@ class Dimension {
             this.calloutContainer = document.createElement('div')
             this.container.appendChild(this.calloutContainer)
         }
-        this.calloutContainer.className = `${calloutClass} ${direction}`
+        this.calloutContainer.className = `${calloutClass} ${calloutClass}-${direction}`
         this.calloutContainer.style.width = `${width}px`
         this.current = {
             key: null
         }
-        this.callout = new Callout({
+        this.callout = new Callout(this.calloutContainer, {
             ...this.options,
             onActive: this.onActive
         })
@@ -140,7 +142,17 @@ class Dimension {
     // 新增标注块
     addOutputItem(node, key) {
         window.requestAnimationFrame(() => {
-            this.callout.addBox(node, `${key}`)
+            const { top, bottom, left } = utils.getBoundingClientRect(node)
+            const { width: containerWidth } = utils.getBoundingClientRect(this.container)
+            const { direction, width } = this.options
+            const leftWidth = left - (direction === 'left' ? width : 0)
+            this.callout.addBox({
+                top,
+                bottom,
+                left: leftWidth,
+                right: containerWidth - leftWidth - width,
+                key: `${key}`
+            })
         })
     }
     // 删除标注
@@ -191,23 +203,19 @@ class Dimension {
         return node.nodeType === Node.TEXT_NODE ? !!node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2') : true
     }
     changeDirection (direction) {
-        this.callout.unbindEvent()
-        this.options.direction = direction
-        const direction1 = utils.leftRightReplace(direction)
         const { width, calloutClass } = this.options
+        const reverseDirection = utils.reverseDirection(direction)
+        this.options.direction = direction
+        this.options.reverseDirection = reverseDirection
         this.container.style[`padding-${direction}`] = `${width + this.containerPadding[direction]}px`
-        this.container.style[`padding-${direction1}`] = `${this.containerPadding[direction1]}px`
-        this.calloutContainer.className = `${calloutClass} ${direction}`
-        this.callout = new Callout({
-            ...this.options,
-            direction,
-            onActive: this.onActive
-        })
-        this.mountCallout()
+        this.container.style[`padding-${reverseDirection}`] = `${this.containerPadding[reverseDirection]}px`
+        this.calloutContainer.className = `${calloutClass} ${calloutClass}-${direction}`
+        this.calloutContainer.classList.replace(reverseDirection, direction)
+        this.callout.changeDirection(direction, this.options.reverseDirection)
     }
     resize () {
         this.callout.unbindEvent()
-        this.callout = new Callout({
+        this.callout = new Callout(this.calloutContainer, {
             ...this.options,
             onActive: this.onActive
         })
