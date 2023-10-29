@@ -59,9 +59,9 @@
                 b: 'bbbbb'
             }
             const list = [
-                `111<dimension data-key="a"><span class="dimension-side start" data-key="a"></span>aaaa<span class="dimension-side end" data-key="a"></span></dimension>111`,
-                `111<dimension data-key="b"><span class="dimension-side start" data-key="b"></span>bbbb<span class="dimension-side end" data-key="b"></span></dimension>111`,
-                `333<dimension data-key="c,d"><span class="dimension-side start" data-key="c"></span><span class="dimension-side start" data-key="d"></span>abab<span class="dimension-side end" data-key="d"></span><span class="dimension-side end" data-key="c"></span></dimension>333`,
+                `111<dimension data-key="a"><span class="dimension-side dimension-side-start" data-key="a"></span>aaaa<span class="dimension-side dimension-side-end" data-key="a"></span></dimension>111`,
+                `111<dimension data-key="b"><span class="dimension-side dimension-side-start" data-key="b"></span>bbbb<span class="dimension-side dimension-side-end" data-key="b"></span></dimension>111`,
+                `333<dimension data-key="c,d"><span class="dimension-side dimension-side-start" data-key="c"></span><span class="dimension-side dimension-side-start" data-key="d"></span>abab<span class="dimension-side dimension-side-end" data-key="d"></span><span class="dimension-side dimension-side-end" data-key="c"></span></dimension>333`,
             ]
             const contain = document.createDocumentFragment()
             list.forEach(item => {
