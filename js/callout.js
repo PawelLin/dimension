@@ -271,6 +271,14 @@ class Callout {
         this.onActive = onActive
         this.bindEvent()
     }
+    reset () {
+        this.elem.boxContainer.innerHTML = ''
+        this.elem.lineContainer.innerHTML = ''
+        this.line = {}
+        this.box = {}
+        this.bottomList = []
+        this.activeItem = null
+    }
     getElem (container) {
         const { boxContainerClass, lineContainerClass } = this.options
         container = typeof container === 'string' ? document.querySelector(container) : container
@@ -362,7 +370,7 @@ class Callout {
             }
         }
     }
-    addBox(data) {
+    addBox(data, active = true) {
         const { top, bottom, left, right } = data
         const { top: lineContainerTop } = utils.getBoundingClientRect(this.elem.lineContainer)
         const box = this.createBox({ bottom, top: top - lineContainerTop, observe: this.updateElem.bind(this) })
@@ -380,7 +388,8 @@ class Callout {
         } else {
             line.update({ left, right }, true)
         }
-        this.toggleActive(box.addItem(data))
+        const boxItem = box.addItem(data)
+        active && this.toggleActive(boxItem)
     }
     removeBox(callback) {
         if (this.activeItem) {

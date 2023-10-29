@@ -1,27 +1,31 @@
+.dimension-container {
+    position: relative;
+    padding: 10px;
+    font-size: 30px;
+    --dimension-color: #f01201;
+    --dimension-bg: #ffd5d5;
+    --dimension-bg-active: #ffa8a8;
+    --dimension-callout-bg: ##f4f4f4;
+}
 dimension {
     position: relative;
-    background-color: #ffd5d5;
+    background-color: var(--dimension-bg);
 }
 dimension.active, dimension.active dimension {
-    background-color: #ffa8a8;
+    background-color: var(--dimension-bg-active);
 }
 .dimension-side {
-    color: #f01201;
+    color: var(--dimension-color);
 }
 .dimension-side::before {
     position: absolute;
     z-index: 1;
 }
-.dimension-side.start::before {
+.dimension-side-start::before {
     content: '{';
     margin-left: -0.1em;
 }
-.dimension-side.end::before {
+.dimension-side-end::before {
     content: '}';
     margin-left: -0.2em;
-}
-.dimension-contain {
-    position: relative;
-    padding: 10px;
-    font-size: 30px;
 }

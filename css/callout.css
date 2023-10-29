@@ -2,7 +2,7 @@
     position: absolute;
     top: 0;
     height: 100%;
-    background-color: #f4f4f4;
+    background-color: var(--dimension-callout-bg);
 }
 .dimension-callout-left {
     left: 0;
@@ -39,7 +39,7 @@
 }
 .dimension-line {
     position: absolute;
-    border-bottom: 1px dashed #f01201;
+    border-bottom: 1px dashed var(--dimension-color);
 }
 .dimension-line-active {
     border-bottom-style: solid;
@@ -57,8 +57,8 @@
     padding: 5px;
     font-size: 12px;
     border-radius: 5px;
-    border: 1px solid #f01201;
-    background-color: #ffd5d5;
+    border: 1px solid var(--dimension-color);
+    background-color: var(--dimension-bg);
 }
 .dimension-item + .dimension-item {
     margin-top: 1px;
@@ -71,11 +71,11 @@
 }
 .dimension-item-line {
     position: absolute;
-    border-left: 1px dashed #f01201;
+    border-left: 1px dashed var(--dimension-color);
 }
 .dimension-item-active {
-    outline: 1px solid #f01201;
-    background-color: #ffa8a8;
+    outline: 1px solid var(--dimension-color);
+    background-color: var(--dimension-bg-active);
     .dimension-item-line {
         border-left-width: 2px;
         border-left-style: solid;
