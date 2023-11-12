@@ -4,7 +4,7 @@ class Dimension {
     constructor(container, options) {
         const { resize } = this.options = Object.assign({
             direction: 'right',
-            width: 300,
+            width: 240,
             nodeName: 'dimension',
             containerClass: 'dimension-container',
             sideClass: 'dimension-side',
@@ -66,7 +66,7 @@ class Dimension {
     unbindEvent () {
         this.callout.unbindEvent()
         this.container.classList.remove(this.options.containerClass)
-        window.removeEventListener('resize', thi.onResize)
+        window.removeEventListener('resize', this.onResize)
     }
     onActive (newKey, oldKey) {
         const { nodeName } = this.options
@@ -85,13 +85,13 @@ class Dimension {
     add(key = Date.now()) {
         const { nodeName } = this.options
         const selection = window.getSelection()
-        let { startContainer: startNode, endContainer: endNode, startOffset, endOffset } = selection.getRangeAt(0)
+        let { startNode, endNode, startOffset, endOffset } = this.getSideData(selection)
         if (this.calloutContainer.contains(startNode)) return
         let elem = startNode
         while (elem.parentElement !== this.container) {
             elem = elem.parentElement
         }
-        const list = this.getChildNodes(elem, startNode, endNode).filter(node => node.nodeType === Node.TEXT_NODE)
+        const list = this.getChildNodes(elem, startNode, endNode).filter(this.isTargetNode)
         if (startNode.textContent.length === startOffset) {
             list.shift()
             startNode = list[0]
@@ -121,6 +121,13 @@ class Dimension {
                 parent.dataset.key = `${parent.dataset.key},${key}`
                 this.addSide(parent, `${+isStart}${+isEnd}`, key)
                 continue
+            }
+            if (this.isImgNode(node)) {
+                const dimension = document.createElement(nodeName)
+                dimension.dataset.key = key
+                parent.insertBefore(dimension, node)
+                dimension.appendChild(node)
+                this.addSide(dimension, `${+isStart}${+isEnd}`, key)
             }
             if (dimensionText) {
                 const dimension = document.createElement(nodeName)
@@ -216,8 +223,25 @@ class Dimension {
         return list
     }
     // 判断是否为有效节点
-    isValidNode(node) {
+    isValidNode (node) {
         return node.nodeType === Node.TEXT_NODE ? !!node.textContent.replace(/^(\n\s+)?(.*)(\n\s+)?$/, '$2') : true
+    }
+    isTargetNode (node) {
+        return node.nodeType === Node.TEXT_NODE || ['IMG'].includes(node.nodeName)
+    }
+    isImgNode (node) {
+        return node.nodeName === 'IMG'
+    }
+    // 获取边缘数据
+    getSideData (selection) {
+        let { startContainer: startNode, endContainer: endNode, startOffset, endOffset } = selection.getRangeAt(0)
+        if (startNode.nodeType === Node.ELEMENT_NODE) {
+            startNode = startNode.childNodes[startOffset]
+        }
+        if (endNode.nodeType === Node.ELEMENT_NODE) {
+            endNode = endNode.childNodes[endOffset - 1]
+        }
+        return { startNode, endNode, startOffset, endOffset }
     }
     getData () {
         const data = this.callout.getItemValue()
@@ -236,6 +260,7 @@ class Dimension {
                 this.mountCallout(elem)
             }
         })
+        return this
     }
     mountCallout (elem = this.container) {
         const { sideClass, sideEndClass } = this.options

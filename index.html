@@ -12,6 +12,15 @@
         p {
             word-break: break-all;
         }
+        table {
+            width: 100%;
+            border-top: 1px solid;
+            border-left: 1px solid;
+        }
+        td {
+            border-bottom: 1px solid;
+            border-right: 1px solid;
+        }
         .buttons {
             position: sticky;
             top: 0;
@@ -35,22 +44,23 @@
     </div>
     <div class="dimension-contain">
         <div>
-            <p>0</p>
-            <p>111111</p>
-            <p style="font-size: 50px;">2222222222222222<span>S<span>sss</span>BB</span>666666666666666666666</p>
-            <p>3333<span>123x</span>33</p>
-            <p>444444</p>
-            <p>555555</p>
-            <p>666666</p>
-            <p>777777</p>
-            <p>888888</p>
-            <p>999999</p>
+            <p>11111</p>
+            <p style="font-size: 50px;">文字<span>大<span>小</span>为</span>50px</p>
+            <img src="./vue.svg" width="50" alt="vue">图片
+            <table cellspacing="0" cellpadding="0">
+                <thead>
+                    <td>姓名</td>
+                    <td>年龄</td>
+                    <td>性别</td>
+                </thead>
+                <tr>
+                    <td>小明</td>
+                    <td>22</td>
+                    <td>男</td>
+                </tr>
+            </table>
         </div>
         <div>00000</div>
-        <!-- <div class="dimension-callout"> -->
-            <!-- <div class="dimension-line-container"></div>
-            <div class="dimension-box-container"></div> -->
-        <!-- </div> -->
     </div>
     <script>
         (function () {
@@ -59,9 +69,9 @@
                 b: 'bbbbb'
             }
             const list = [
-                `111<dimension data-key="a"><span class="dimension-side dimension-side-start" data-key="a"></span>aaaa<span class="dimension-side dimension-side-end" data-key="a"></span></dimension>111`,
-                `111<dimension data-key="b"><span class="dimension-side dimension-side-start" data-key="b"></span>bbbb<span class="dimension-side dimension-side-end" data-key="b"></span></dimension>111`,
-                `333<dimension data-key="c,d"><span class="dimension-side dimension-side-start" data-key="c"></span><span class="dimension-side dimension-side-start" data-key="d"></span>abab<span class="dimension-side dimension-side-end" data-key="d"></span><span class="dimension-side dimension-side-end" data-key="c"></span></dimension>333`,
+                `回显数据111<dimension data-key="a"><span class="dimension-side dimension-side-start" data-key="a"></span>aaaa<span class="dimension-side dimension-side-end" data-key="a"></span></dimension>111`,
+                `回显数据222<dimension data-key="b"><span class="dimension-side dimension-side-start" data-key="b"></span>bbbb<span class="dimension-side dimension-side-end" data-key="b"></span></dimension>222`,
+                `回显数据333<dimension data-key="c,d"><span class="dimension-side dimension-side-start" data-key="c"></span><span class="dimension-side dimension-side-start" data-key="d"></span>abab<span class="dimension-side dimension-side-end" data-key="d"></span><span class="dimension-side dimension-side-end" data-key="c"></span></dimension>333`,
             ]
             const contain = document.createDocumentFragment()
             list.forEach(item => {
@@ -77,7 +87,7 @@
         const dimension = new Dimension('.dimension-contain', {
             direction: 'right',
             resize: true
-        })
+        }).mount()
         document.querySelector('#add-btn').addEventListener('click', () => {
             dimension.add()
         })

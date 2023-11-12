@@ -5,7 +5,7 @@
     --dimension-color: #f01201;
     --dimension-bg: #ffd5d5;
     --dimension-bg-active: #ffa8a8;
-    --dimension-callout-bg: ##f4f4f4;
+    --dimension-callout-bg: #f4f4f4;
 }
 dimension {
     position: relative;
